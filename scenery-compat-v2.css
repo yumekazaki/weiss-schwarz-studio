@@ -36,6 +36,11 @@
 .simple-scenery #home [data-backdrop=host] { background-image: url('art/scenes/konosuba.jpg'); }
 .simple-scenery #home [data-backdrop=join] { background-image: url('art/scenes/rwby.jpg'); }
 
+/* The animated scenes put a blurred copy above the parent background. */
+.simple-scenery #home .title-scene::before {
+  content: none;
+}
+
 .simple-scenery #home .title-scene > *,
 .simple-scenery #home #title-motion,
 .simple-scenery .workshop-canopy,
