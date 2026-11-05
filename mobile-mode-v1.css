@@ -1,0 +1,41 @@
+#home #title-mobile-mode {
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid #ffffff65;
+  border-radius: 5px;
+  background: #102132;
+  color: #f2f5fb;
+  font-size: 11px;
+}
+
+#home #title-mobile-mode[aria-pressed=true] {
+  border-color: #ffdc87;
+  color: #ffdc87;
+}
+
+/* Keep a single, unfiltered scene on screen and avoid compositing idle effects. */
+.mobile-mode body #home {
+  height: 100svh;
+  min-height: 100svh;
+}
+
+.mobile-mode #home .title-scene:not(.is-active),
+.mobile-mode #home .card-halo {
+  display: none;
+}
+
+.mobile-mode body *,
+.mobile-mode body *::before,
+.mobile-mode body *::after {
+  animation: none !important;
+  transition: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+@media (max-width: 700px) {
+  .mobile-mode #home .menu-overlay {
+    background: linear-gradient(0deg, rgba(5, 18, 32, .92), rgba(5, 18, 32, .57) 47%, transparent 82%);
+  }
+}

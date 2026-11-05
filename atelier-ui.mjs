@@ -35,7 +35,7 @@ export function mountAtelier(api){
 
  function setArtwork(key){
   const info={decks:['Fate','FS/S36-E002'],practice:['Sword Art Online','SAO/S20-E077'],host:['KonoSuba','KS/W55-E043'],join:['RWBY','RWBY/WX03-044']}[key];
-  all('[data-backdrop]').forEach(e=>e.classList.toggle('is-active',e.dataset.backdrop===key));all('[data-feature]').forEach(e=>e.classList.toggle('is-active',e.dataset.feature===key));all('[data-menu-option]').forEach(e=>e.classList.toggle('is-featured',e.dataset.menuOption===key));$('#featured-series').textContent=info[0];$('#featured-card-code').textContent=info[1];$('#home').dataset.artwork=key; const bg=document.querySelector('[data-backdrop="'+key+'"] img[data-src]');if(bg){bg.src=bg.dataset.src;delete bg.dataset.src;}const enter=$('#title-enter');if(enter){enter.textContent=key==='decks'?'Enter Deck Builder →':key==='practice'?'Enter Practice →':'Coming soon';enter.disabled=key==='host'||key==='join';}const credit=$('#title-art-credit');if(credit)credit.textContent='Created scene artwork · Credits ↗';
+  all('[data-backdrop]').forEach(e=>e.classList.toggle('is-active',e.dataset.backdrop===key));all('[data-feature]').forEach(e=>e.classList.toggle('is-active',e.dataset.feature===key));all('[data-menu-option]').forEach(e=>e.classList.toggle('is-featured',e.dataset.menuOption===key));$('#featured-series').textContent=info[0];$('#featured-card-code').textContent=info[1];$('#home').dataset.artwork=key; const bg=document.querySelector('[data-backdrop="'+key+'"] img[data-src]');if(bg&&!document.documentElement.classList.contains('mobile-mode')){bg.src=bg.dataset.src;delete bg.dataset.src;}const enter=$('#title-enter');if(enter){enter.textContent=key==='decks'?'Enter Deck Builder →':key==='practice'?'Enter Practice →':'Coming soon';enter.disabled=key==='host'||key==='join';}const credit=$('#title-art-credit');if(credit)credit.textContent='Created scene artwork · Credits ↗';
  }
  const titleButtons=all('[data-menu-option]');let touchPreview=false;
  titleButtons.forEach(button=>{const key=button.dataset.menuOption;button.addEventListener('pointerenter',e=>{if(e.pointerType!=='touch')setArtwork(key);});button.addEventListener('focus',()=>setArtwork(key));button.addEventListener('pointerdown',e=>{touchPreview=e.pointerType==='touch';setArtwork(key);});button.onclick=e=>{setArtwork(key);if(touchPreview||(window.matchMedia?.('(hover: none)').matches&&e.detail>0)){touchPreview=false;return;}if(key==='decks'||key==='practice')api.view(key);else api.toast('Multiplayer is coming soon. Deck Builder and Practice are ready to use.');};button.addEventListener('keydown',e=>{if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;const i=titleButtons.indexOf(button),next=e.key==='Home'?0:e.key==='End'?3:(i+(e.key==='ArrowDown'?1:-1)+4)%4;titleButtons[next].focus();e.preventDefault();});});
@@ -44,7 +44,40 @@ export function mountAtelier(api){
  const artInfo=()=>{document.querySelector('.title-secondary').open=false;$('#dialog-body').innerHTML='<h2>Scene artwork & motion</h2><p>The featured cards are official Bushiroad card scans. Fate, Sword Art Online, KonoSuba and RWBY backgrounds are newly created fan illustrations, not official artwork. The cherry-blossom workshop and sunlit meadow battlefield are newly created scenery illustrations. The Sword Art Online scene features Kirito, Asuna and Yui sitting together on a grassy hill.</p><p>These are layered animated illustrations, not animated video: cloud banks, displaced grass and fabric, atmospheric light, drifting petals and scene depth. Independent character blinking and frame-by-frame character animation are not included.</p><p>Featured cards: “Excalibur” Saber · FS/S36-E002; 《Black Swordsman》 Kirito · SAO/S20-E077; “Detonative Dame” Megumin · KS/W55-E043; Ruby Rose · RWBY/WX03-044.</p>';$('#dialog').showModal();};
  if($('#title-art-info'))$('#title-art-info').onclick=artInfo;if($('#title-art-credit'))$('#title-art-credit').onclick=artInfo;if($('#title-sources'))$('#title-sources').onclick=()=>$('#about').click();
  if($('#title-motion'))$('#title-motion').onclick=e=>{const paused=$('#home').classList.toggle('scenery-paused');e.currentTarget.setAttribute('aria-pressed',String(paused));e.currentTarget.textContent=paused?'Play scenery':'Pause scenery';const svg=document.querySelector('.scene-filter-defs');if(svg){if(paused)svg.pauseAnimations?.();else svg.unpauseAnimations?.();}};
- const preloadScenes=()=>{all('.scene-base[data-src]').forEach((img,i)=>window.setTimeout(()=>{img.src=img.dataset.src;delete img.dataset.src;},i*180));};if(window.requestIdleCallback)window.requestIdleCallback(preloadScenes,{timeout:1800});else window.setTimeout(preloadScenes,700);
+ const root=document.documentElement;
+ const mobileModeButton=$('#title-mobile-mode');
+ const preloadScenes=()=>{
+  all('.scene-base[data-src]').forEach((img,i)=>window.setTimeout(()=>{
+   if(!root.classList.contains('mobile-mode') && img.dataset.src){
+    img.src=img.dataset.src;
+    delete img.dataset.src;
+   }
+  },i*180));
+ };
+ const syncMobileMode=()=>{
+  const enabled=root.classList.contains('mobile-mode');
+  if(mobileModeButton){
+   mobileModeButton.setAttribute('aria-pressed',String(enabled));
+   mobileModeButton.textContent=enabled?'Mobile Mode · On':'Mobile Mode · Off';
+  }
+  const titleFilters=$('.scene-filter-defs');
+  if(enabled || $('#home').classList.contains('scenery-paused')) titleFilters?.pauseAnimations?.();
+  else titleFilters?.unpauseAnimations?.();
+  if(enabled) landscapeFilters.pauseAnimations?.();
+  else landscapeFilters.unpauseAnimations?.();
+ };
+ if(mobileModeButton)mobileModeButton.onclick=()=>{
+  const enabled=root.classList.toggle('mobile-mode');
+  root.classList.toggle('simple-scenery',enabled || root.classList.contains('scenery-compat'));
+  try{window.localStorage.setItem('ws-mobile-mode',enabled?'on':'off');}catch{}
+  syncMobileMode();
+  if(!enabled)preloadScenes();
+ };
+ syncMobileMode();
+ if(!root.classList.contains('mobile-mode')){
+  if(window.requestIdleCallback)window.requestIdleCallback(preloadScenes,{timeout:1800});
+  else window.setTimeout(preloadScenes,700);
+ }
  document.querySelector('.title-secondary')?.addEventListener('keydown',e=>{if(e.key==='Escape'){e.currentTarget.open=false;e.currentTarget.querySelector('summary').focus();}});
 
  function onView(v){
@@ -139,4 +172,3 @@ export function mountAtelier(api){
  setArtwork('decks');onView('home');
  return {onView,matchUpdated,hidePreview,closeMenu,clickCard,clickPile,emptyStage,showPreview,previewElement:preview,menuElement:menu,manualElement:manual};
 }
-
