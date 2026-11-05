@@ -1,5 +1,5 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.81.1';
-import {initialize,reduce,project,tick} from '../online-core.mjs';
+import {initialize,reduce,project,projectSpectator,tick} from '../online-core.mjs';
 const url=Deno.env.get('SUPABASE_URL')!,service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
 import {validate} from '../engine.mjs';
@@ -20,10 +20,45 @@ async function definitions(decks:any[]){starter??=await loadJSON('data/starter-d
 function deck(d:any){check(d&&typeof d.name==='string'&&d.name.length<=150&&d.cards&&typeof d.cards==='object'&&!Array.isArray(d.cards),'Invalid deck.');const entries=Object.entries(d.cards);check(entries.length<=100&&entries.every(([id,n])=>id.length<150&&Number.isInteger(n)&&Number(n)>0&&Number(n)<=50),'Invalid card counts.');return {id:String(d.id||crypto.randomUUID()).slice(0,100),name:d.name,cards:Object.fromEntries(entries),language:d.language==='JP'?'JP':'EN',format:['Standard','Neo Standard','Side'].includes(d.format)?d.format:'Standard'};}
 function snap(row:any,uid:string){const p=row.host===uid?0:row.guest===uid?1:-1;check(p>=0,'You are not seated in this room.');const d=row.data,s=d.state,catalog=new Map(Object.entries(d.catalog||{}));return {id:row.id,code:row.code,version:row.version,seat:p,status:d.status,names:d.names,ready:d.ready,ownDeck:d.decks?.[p]||null,opponentDeck:d.ready?.[1-p]?d.decks?.[1-p]?.name:null,opponentPresent:Date.now()-Date.parse(p===0?row.guest_seen:row.host_seen)<18000&&!d.left?.[1-p],hasOpponent:!!row.guest,undo:d.undoRequest?{by:d.undoRequest.by,revealed:d.undoRequest.revealed}:null,state:s?project(s,p,catalog):null};}
 async function room(id:string){const {data,error}=await db.from('ws_rooms').select('*').eq('id',id).single();if(error)throw Error('Room not found or unavailable.');return data;}
+function spectatorSnapshot(row:any) {
+ const {state,names,status,catalog}=row.data;
+ return {id:row.id, code:row.code, version:row.version, seat:-1, names,status,
+  state:state ? projectSpectator(state,new Map(Object.entries(catalog))) : null};
+}
 async function commit(row:any,data:any,extra:any={}){const {data:rows,error}=await db.from('ws_rooms').update({data,version:row.version+1,...extra}).eq('id',row.id).eq('version',row.version).select('*');if(error)throw error;check(rows?.length,'The match changed. Your action was not applied; review the current state.');return rows![0];}
 Deno.serve(async req=>{if(req.method==='OPTIONS')return new Response('ok',{headers});if(req.method!=='POST')return reply({error:'POST required'},405);
  try{const token=req.headers.get('Authorization')?.replace(/^Bearer /,'');if(!token)return reply({error:'Sign in to play online.'},401);const {data:auth,error:authError}=await db.auth.getUser(token);if(authError||!auth.user||auth.user.is_anonymous)return reply({error:'Please sign in again.'},401);const uid=auth.user.id;
  const raw=await req.text();check(raw.length<120000,'Request too large.');const b=JSON.parse(raw),op=b.op;
+ if(op==='rooms'){
+   const cutoff=new Date(Date.now()-120000).toISOString();
+   const {data,error}=await db.from('ws_rooms')
+    .select('code,password_hash,guest,status:data->>status,hostName:data->names->>0,ended:data->state->auto->gameOver')
+    .in('data->>status',['lobby','playing'])
+    .or('host_seen.gte.'+cutoff+',guest_seen.gte.'+cutoff)
+    .order('created_at',{ascending:false}).limit(50);
+   if(error)throw error;
+   return reply({rooms:data.filter(r=>!r.ended).map(r=>({
+     code:r.code, name:r.hostName, status:r.status,
+     locked:!!r.password_hash, joinable:r.status==='lobby'&&!r.guest
+   }))});
+ }
+ if(op==='watch'){
+   check(typeof b.code==='string'&&/^[A-Z0-9]{6}$/.test(b.code.toUpperCase()),'Enter a six-character room code.');
+   check(typeof b.password==='string'&&new TextEncoder().encode(b.password).length<=72,'Invalid room password.');
+   const {data,error}=await db.rpc('ws_watch',{actor:uid,room_code:b.code,room_password:b.password});
+   if(error)throw error;
+   check(!data.error,data.error);
+   return reply(spectatorSnapshot(await room(data.id)));
+ }
+ if(op==='watch-state'){
+   const {data,error}=await db.from('ws_spectators').select('room_id')
+    .eq('room_id',String(b.room)).eq('user_id',uid)
+    .gt('expires_at',new Date().toISOString()).maybeSingle();
+   check(!error&&data,'Join as a spectator first.');
+   const row=await room(data!.room_id);
+   check(row.data.status!=='closed','The room has closed.');
+   return reply(spectatorSnapshot(row));
+ }
  if(op==='decks'){const {data,error}=await db.from('ws_decks').select('id,deck,updated_at').eq('user_id',uid);if(error)throw error;return reply({decks:data.map(r=>r.deck)});}
  if(op==='save-deck'){const d=deck(b.deck);const {error}=await db.from('ws_decks').upsert({user_id:uid,id:d.id,deck:d,updated_at:new Date().toISOString()});if(error)throw error;return reply({deck:d});}
  if(op==='delete-deck'){const {error}=await db.from('ws_decks').delete().eq('user_id',uid).eq('id',String(b.deckId));if(error)throw error;return reply({ok:true});}

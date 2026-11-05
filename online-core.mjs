@@ -79,3 +79,29 @@ export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog)
  out.choiceOwner=owner;out.events=out.events?.map(e=>({...e,refs:e.refs.filter(r=>!['deck','hand','stock'].includes(r.z)||r.p===seat),changes:(e.changes||[]).filter(c=>c.from.p===seat&&c.to.p===seat||![c.from.z,c.to.z].some(z=>['deck','hand','stock'].includes(z)))}));delete out.onlineManualOwner;delete out.first;delete out.revealUntil;
  return out;
 }
+
+export function projectSpectator(state, catalog) {
+  const projected = project(state, -1, catalog);
+  const players = projected.players.map(({zones}) => ({
+    zones: Object.fromEntries(Object.entries(zones).map(([zone, cards]) => [
+      zone, cards.map(({uid, hidden, faceDown, id, orientation, revealed}) => ({
+        uid, hidden, faceDown, id, orientation, revealed
+      }))
+    ]))
+  }));
+  const stats = {};
+  for (const player of players) {
+    for (const zone of stageKeys) {
+      for (const card of player.zones[zone]) {
+        const values = projected.stats[card.uid];
+        if (!card.hidden && values) stats[card.uid] = {soul:values.soul, power:values.power};
+      }
+    }
+  }
+  return {
+    players, stats, active:state.active, turn:state.turn, phase:state.phase,
+    step:state.step, waitingFor:projected.waitingFor, choiceOwner:projected.choiceOwner,
+    setup:state.setup ? {p:state.setup.p} : null, log:[],
+    auto:{reveal:projected.auto.reveal, gameOver:projected.auto.gameOver}
+  };
+}
