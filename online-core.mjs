@@ -33,7 +33,8 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  if(type==='effect-request'){need(!s.manualWindow&&!a.reveal,'Finish the existing effect/check first.');need(decision===null||decision===p,'Waiting for the other player.');need(typeof args.reason==='string'&&args.reason.trim().length>=3&&args.reason.length<=400,'Describe the printed effect and who must act.');need(args.player===0||args.player===1,'Choose the affected player.');s.manualWindow={p:args.player,by:p,reason:args.reason,previousPaused:!!a.paused};a.paused=true;event(s,p,type,{...args,refs:[]},original);return s;}
  if(type==='effect-done'){need(windowOwner===p,'Only the player resolving this effect can finish it.');need(!s.cost,'Finish paying the cost first.');a.paused=s.manualWindow.previousPaused;delete s.manualWindow;r.afterMutation(s);event(s,p,type,args,original);return s;}
  const manual=type.startsWith('manual-');
- if(s.manualWindow)need(manual&&windowOwner===p,'Waiting for the instructed player to resolve the manual effect.');
+ if(manual&&a.choice&&!manualChoice)throw Error('Finish the pending required decision before making manual changes.');
+ if(s.manualWindow)need(manual&&windowOwner===p||type==='respond'&&decision===p,'Waiting for the instructed player to resolve the manual effect.');
  else if(manual)need(manualChoice&&decision===p,'Open a manual effect window first. Both players can see who is resolving it.');
  else if(type==='respond'){need(decision===p,'This decision belongs to Player '+(decision+1)+'.');}
  else need(decision===null&&!a.reveal&&!a.attack&&!a.queue.length&&!a.paused,'A resolution is pending.');
@@ -62,6 +63,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  else if(type==='manual-remove-modifier'){need(Number.isInteger(args.index)&&a.effects[args.index]?.p===p,'Only remove your own modifier.');a.effects.splice(args.index,1);}
  else if(type==='manual-phase'){need(p===s.active&&!a.choice&&!a.attack&&!a.reveal&&!a.queue.length,'Phase correction requires a clear resolution and the active player.');need(Number.isInteger(args.phase)&&args.phase>=0&&args.phase<=6,'Invalid phase.');s.phase=args.phase;}
  else throw Error('Unsupported command.');
+ if(manual&&!s.cost)r.ruleInterrupts(s);
  if(a.reveal)s.revealUntil=Date.now()+900;
  if(s.clockedTurn&&s.clockedTurn!==s.turn)delete s.clockedTurn;
  const count=t=>t.players.flatMap(p=>Object.values(p.zones).flat()).map(c=>c.uid).sort().join('|');need(count(s)===count(original),'Card conservation failed.');
@@ -70,7 +72,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
 }
 export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog);out.stats={};for(let p=0;p<2;p++)for(const z of stageKeys){const c=s.players[p].zones[z][0];if(c)out.stats[c.uid]=r.stats(s,{p,z,uid:c.uid});}
  for(let p=0;p<2;p++)for(const [z,arr] of Object.entries(out.players[p].zones)){const hideAll=z==='deck'||z==='stock'||z==='hand'&&p!==seat;out.players[p].zones[z]=arr.map((c,i)=>!c.revealed&&(hideAll||c.faceDown&&p!==seat)?{uid:'hidden:'+p+':'+z+':'+i,hidden:true,faceDown:true}:c);}
- const owner=choiceOwner(s),a=out.auto;out.waitingFor=s.setup?.p??s.manualWindow?.p??owner??s.active;
+ const owner=choiceOwner(s),a=out.auto;out.waitingFor=s.setup?.p??owner??s.manualWindow?.p??s.active;
  // Queue/tasks contain deck order, private choice options and card identities. Never send them.
  out.auto={enabled:true,paused:a.paused,choice:owner===seat?a.choice:null,reveal:a.reveal,gameOver:a.gameOver,effects:a.effects,reviews:a.reviews?.filter(x=>!['hand','deck','stock'].includes(x.z)),results:a.results?.map(d=>({p:d.p,n:d.n,canceled:d.canceled,label:d.label})),attack:a.attack?{p:a.attack.p,type:a.attack.type,ref:a.attack.ref,defender:a.attack.defender}:null};
  out.choiceOwner=owner;out.events=out.events?.map(e=>({...e,refs:e.refs.filter(r=>!['deck','hand','stock'].includes(r.z)||r.p===seat),changes:(e.changes||[]).filter(c=>c.from.p===seat&&c.to.p===seat||![c.from.z,c.to.z].some(z=>['deck','hand','stock'].includes(z)))}));delete out.onlineManualOwner;delete out.first;delete out.revealUntil;

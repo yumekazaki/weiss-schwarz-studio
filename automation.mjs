@@ -119,6 +119,7 @@ export function createResolver(card){
   case 'blocked':prepend(s,c.task);break;
   default:break;
  }run(s);}
+ function ruleInterrupts(s){const a=auto(s),pending=a.choice;if(pending&&['level','level-order','rule-order'].includes(pending.kind))return; a.choice=null;let guard=0;while(!a.choice&&!a.gameOver&&guard++<20&&interrupts(s)){}if(pending&&!a.gameOver){if(a.choice)prepend(s,{type:'resume-choice',choice:pending});else a.choice=pending;}}
  // A top-deck trigger move must also run the same interrupt checks as every other transfer.
  function afterMutation(s,before){const a=auto(s);a.effects=a.effects.filter(e=>(e.expires==='persistent'||e.turn===s.turn)&&allStage(s,e.p).some(r=>r.uid===e.uid));if(before){for(const p of [s.active,1-s.active])for(const r of [...allStage(s,p),...z(s,p).climax.map(c=>({p,z:'climax',uid:c.uid}))]){const obj=inst(s,r),was=before.players[p].zones.hand.some(c=>c.uid===obj.uid);if(!was)continue;const priorSame=before.players[p].zones[r.z].some(c=>c.uid===obj.uid);if(priorSame)continue;for(const text of abilityLines(get(obj.id))){const ab=parseAbility(text);if(ab?.kind==='entry-target')a.queue.push(...(ab.draw?[{type:'draw',p}]:[]),{type:'entry-target',p,...ab,label:get(obj.id)?.code});else if(!ab&&/【AUTO】/.test(text))a.queue.push({type:'checkpoint',p,title:'Card entered play · resolve unsupported entry abilities'});}}}run(s);}
  function endAttacks(s){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack)throw Error('Finish the current attack or choice.');prepend(s,check(s,'Beginning of encore step'),{type:'encore'});run(s);}
@@ -127,6 +128,6 @@ export function createResolver(card){
  function drawCards(s,p,n){procedure(s,Array.from({length:n},()=>({type:'draw',p})));}
  function advance(s){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver)throw Error('Finish the current resolution before advancing.');if(s.phase===5)return endAttacks(s);if(s.phase===0){prepend(s,check(s,'Beginning of stand phase'),{type:'stand'});}else if(s.phase===1){prepend(s,{type:'draw-phase'});}else if(s.phase===6){prepend(s,check(s,'Beginning of end phase'),{type:'end-discard'});}else{s.phase++;if(s.phase===5){a.attackPhaseTurn=s.turn;s.step='Attack declaration';}else s.step=['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase];prepend(s,check(s,'Beginning of '+['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase]+' phase'),s.phase===5?check(s,'Beginning of attack declaration step'):null);}run(s);}
  function finishReveal(s,id){const a=auto(s);if(!a.reveal||a.reveal.id!==id)throw Error('This reveal has already finished.');a.reveal=null;run(s);}
- return {stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,manualEffect:effect,auto};
+ return {ruleInterrupts,stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,manualEffect:effect,auto};
 }
 
