@@ -47,7 +47,105 @@ function renderDeck(){renderDock();$('#deck-name').value=draft.name;$('#format')
 $('#deck-name').oninput=e=>{draft.name=e.target.value;saveDraft();renderDock();};['format','deck-language'].forEach(id=>$('#'+id).onchange=()=>{draft.format=$('#format').value;draft.language=$('#deck-language').value;saveDraft();renderDeck();});$('#save-deck').onclick=()=>{if(!draft.name.trim())return toast('Give your deck a name.');draft.id=draft.id||crypto.randomUUID();const i=saved.findIndex(d=>d.id===draft.id);if(i<0)saved.push(structuredClone(draft));else saved[i]=structuredClone(draft);persist('ws-decks',saved);saveDraft();renderDeck();toast('Deck saved on this browser.');document.dispatchEvent(new CustomEvent('ws-deck-saved',{detail:structuredClone(draft)}));};$('#new-deck').onclick=()=>{draft={name:'Untitled deck',cards:{},format:'Standard',language:'EN'};saveDraft();renderDeck();};
 $('#example-deck').onclick=async()=>{try{const r=await fetch('data/example-deck.json');if(!r.ok)throw Error('Study deck unavailable.');draft=await r.json();delete draft.id;saveDraft();renderDeck();toast('50-card study deck loaded. Save it to use at the practice table.');}catch(e){toast(e.message);}};
 function download(name,text,type='application/json'){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-$('#export-deck').onclick=()=>download(draft.name+'.json',JSON.stringify({...draft,schema:'ws-atelier-deck-v1'},null,2));$('#export-text').onclick=()=>download(draft.name+'.txt',Object.entries(draft.cards).map(([id,n])=>`${n} ${id.includes(':art:')?id:catalog.get(id)?.code||id}`).join('\n'),'text/plain');$('#import-deck').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const t=await f.text();let d;if(t.trim().startsWith('{')){d=JSON.parse(t);if(!d.cards||typeof d.cards!=='object')throw Error('Expected a cards object.');for(const [id,n] of Object.entries(d.cards))if(!catalog.has(id)||!Number.isInteger(n)||n<1||n>500)throw Error('Unknown card or invalid count: '+id);d={name:String(d.name||f.name),cards:d.cards,format:['Standard','Side','Neo Standard'].includes(d.format)?d.format:'Standard',language:d.language==='JP'?'JP':'EN'};}else{d={name:f.name.replace(/\.txt$/,''),cards:{},format:'Standard',language:$('#deck-language').value};for(const line of t.split(/\r?\n/).filter(x=>x.trim())){const m=line.trim().match(/^(\d+)\s*[x×]?\s+(.+)$/);if(!m)throw Error('Expected “4 CARD/NUMBER” on each line.');const matches=cards.filter(c=>c.language===d.language&&c.code===m[2].trim());const c=catalog.get(m[2].trim())||(matches.length===1?matches[0]:null);if(matches.length>1&&!catalog.has(m[2].trim()))throw Error('Multiple artwork variants share '+m[2]+'. Use a JSON deck export to preserve the exact artwork.');if(!c)throw Error('Card not found: '+m[2]);const n=+m[1];if(n<1||n>500)throw Error('Invalid count');d.cards[c.id]=(d.cards[c.id]||0)+n;}}draft=d;saveDraft();renderDeck();toast('Deck imported. Review construction checks before saving.');}catch(e){toast(e.message);}e.target.value='';};$('#practice-deck').onclick=()=>{if(!saved.some(d=>d.id===draft.id))$('#save-deck').click();view('practice');};
+$('#export-deck').onclick=()=>download(draft.name+'.json',JSON.stringify({...draft,schema:'ws-atelier-deck-v1'},null,2));
+$('#export-text').onclick=()=>download(draft.name+'.txt',Object.entries(draft.cards).map(([id,n])=>n+' '+(id.includes(':art:')?id:catalog.get(id)?.code||id)).join('\n'),'text/plain');
+function parseTextDeck(text, filename, language){
+ const deck={name:filename.replace(/\.txt$/i,'')||'Imported deck',cards:{},format:'Standard',language};
+ for(const [index,raw] of text.split(/\r\n?|\n/).entries()){
+  const line=raw.trim();
+  if(!line || /^(#|\/\/|;)/.test(line) || /^(deck(?: list)?|main deck|characters?|events?|climax(?:es)?)\s*:?$/i.test(line))continue;
+  const match=line.match(/^(\d+)(?:\s*[x×]\s*|\s+)(\S+)(?:\s+.*)?$/i);
+  const label='Line '+(index+1)+': ';
+  if(!match)throw Error(label+'Use a quantity and card number, like 4 SAO/S20-E101.');
+  const [,quantity,code]=match;
+  const matches=cards.filter(c=>c.language===language&&c.code.toUpperCase()===code.toUpperCase());
+  const base=matches.find(c=>c.id===c.language.toLowerCase()+':'+c.code);
+  const card=catalog.get(code)||base||(matches.length===1?matches[0]:null);
+  if(!card){
+   if(matches.length>1)throw Error(label+'Multiple artworks match '+code+'. Use the full card ID or a JSON deck file.');
+   throw Error(label+'Card not found: '+code+'. Check the deck language and card number.'+(!catalogReady?' If the card library is still loading, try again once it finishes.':''));
+  }
+  const count=+quantity;
+  const total=(deck.cards[card.id]||0)+count;
+  if(!Number.isSafeInteger(count)||count<1||total>500)throw Error(label+'Invalid quantity for '+code+'.');
+  deck.cards[card.id]=total;
+ }
+ if(!Object.keys(deck.cards).length)throw Error('This text file contains no cards.');
+ return deck;
+}
+function applyImportedDeck(deck){
+ draft=deck;
+ saveDraft();
+ renderDeck();
+ toast('Deck imported. Review construction checks before saving.');
+}
+function openDeckImport(){
+ showDialog('<h2>Upload deck list</h2><p>Choose a text or JSON file, or enter a shared Bushiroad Deck Log code.</p><p class="muted">For text files, use one quantity and card number per line, such as 4 SAO/S20-E101. Select the deck language in the editor first.</p><button type="button" id="choose-deck-file">Choose text or JSON file</button><form id="decklog-import-form"><h3>Deck Log</h3><label>Code or share link <input name="code" required maxlength="200" autocapitalize="characters" autocomplete="off"></label> <label>Edition <select name="language"><option value="EN">English</option><option value="JP">Japanese</option></select></label> <button type="submit">Import Deck Log</button><p role="status" id="decklog-import-status"></p></form>');
+ $('#choose-deck-file').onclick=()=>$('#import-file').click();
+ const form=$('#decklog-import-form');
+ form.elements.language.value=$('#deck-language').value;
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  const button=form.querySelector('[type=submit]');
+  const status=form.querySelector('[role=status]');
+  let code=form.elements.code.value.trim();
+  let language=form.elements.language.value;
+  if(/^https?:/i.test(code)){
+   const link=code.match(/^https:\/\/(decklog-en|decklog)\.bushiroad\.com\/(?:[a-z]{2}\/)?view\/([a-z0-9]{3,10})\/?(?:[?#].*)?$/i);
+   if(!link){status.textContent='Enter a Bushiroad Deck Log share link or code.';return;}
+   language=link[1].toLowerCase()==='decklog-en'?'EN':'JP';
+   code=link[2];
+  }
+  code=code.toUpperCase();
+  if(!/^[A-Z0-9]{3,10}$/.test(code)){status.textContent='Enter a valid Deck Log code.';return;}
+  button.disabled=true;
+  status.textContent='Looking up the deck…';
+  try{
+   const response=await fetch('https://gzbladuexyqnjqiemlya.supabase.co/functions/v1/ws-decklog?'+new URLSearchParams({code,language}));
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||'Could not load this Deck Log deck.');
+   const list=data.cards.map(row=>row.count+' '+row.code).join('\n');
+   const title=decodeText(data.title).trim()||'Deck Log '+code;
+   let deck;
+   try{deck=parseTextDeck(list,title,language);}
+   catch(error){
+    if(catalogReady || !error.message.includes('Card not found:'))throw error;
+    status.textContent='Waiting for the card library…';
+    await catalogLoading;
+    deck=parseTextDeck(list,title,language);
+   }
+   if(!form.isConnected||!$('#dialog').open)return;
+   applyImportedDeck({...deck,name:title,format:data.format});
+   $('#dialog').close();
+  }catch(error){status.textContent=error.message;}
+  finally{button.disabled=false;}
+ };
+}
+$('#import-deck').onclick=$('#upload-deck-list').onclick=openDeckImport;
+$('#import-file').onchange=async e=>{
+ const f=e.target.files[0];
+ if(!f)return;
+ try{
+  const text=await f.text();
+  let deck;
+  if(text.trim().startsWith('{')){
+   const data=JSON.parse(text);
+   if(!data.cards||typeof data.cards!=='object'||Array.isArray(data.cards))throw Error('Expected a cards object.');
+   for(const [id,count] of Object.entries(data.cards)){
+    if(!catalog.has(id)||!Number.isInteger(count)||count<1||count>500)throw Error('Unknown card or invalid count: '+id);
+   }
+   deck={name:String(data.name||f.name),cards:data.cards,format:['Standard','Side','Neo Standard'].includes(data.format)?data.format:'Standard',language:data.language==='JP'?'JP':'EN'};
+  }else deck=parseTextDeck(text,f.name,$('#deck-language').value);
+  applyImportedDeck(deck);
+  if($('#decklog-import-form')&&$('#dialog').open)$('#dialog').close();
+ }catch(error){
+  const status=$('#decklog-import-status');
+  if(status&&$('#dialog').open)status.textContent=error.message;
+  else toast(error.message);
+ }
+ finally{e.target.value='';}
+};
+$('#practice-deck').onclick=()=>{if(!saved.some(d=>d.id===draft.id))$('#save-deck').click();view('practice');};
 
 function renderDeckOrigin(){const d=draft.provenance,original=includedDecks.find(x=>x.provenance?.product===d?.product),unaltered=original&&Object.keys(original.cards).length===Object.keys(draft.cards).length&&Object.entries(original.cards).every(([id,n])=>draft.cards[id]===n);$('#deck-origin').innerHTML=d?'<div class="notice"><b>'+esc(draft.name)+'</b><p>'+esc(unaltered?d.note:'Edited deck based on the original preconstructed configuration. Its current list and construction checks are shown below.')+'</p><a href="'+esc(d.product)+'" target="_blank" rel="noopener">Official product ↗</a> · <a href="'+esc(d.quantities)+'" target="_blank" rel="noopener">Published full quantity list ↗</a><p>Full card list below · '+Object.values(draft.cards).reduce((a,b)=>a+b,0)+' cards</p></div>':'';}
 function duplicateDeck(d){draft=structuredClone(d);draft.id=crypto.randomUUID();draft.name+=' (copy)';delete draft.included;saved.push(structuredClone(draft));persist('ws-decks',saved);saveDraft();renderDeck();toast('Editable copy saved.');document.dispatchEvent(new CustomEvent('ws-deck-saved',{detail:structuredClone(draft)}));}
@@ -121,6 +219,6 @@ async function loadStarterDecks(){
  }catch(e){toast(e.message);}
 }
 loadStarterDecks();
-async function init(){try{const [sample,names,references,cov,jpNames,jpTexts]=await Promise.all(['cards','series-names','translation-references','coverage','japanese-names-v1','japanese-texts-v1'].map(f=>fetch('data/'+f+'.json').then(r=>{if(!r.ok)throw Error('Could not load '+f);return r.json();})));seriesNames=names;translationReferences={references:references.references,names:jpNames,texts:jpTexts};cards=[...new Map([...cards,...sample].map(c=>[c.id,c])).values()];catalog=new Map(cards.map(c=>[c.id,c]));coverage=cov;rebuildPresentation();try{[restrictions,jpRestrictions]=await Promise.all(['restrictions','jp-restrictions'].map(f=>fetch('data/'+f+'.json').then(r=>r.ok?r.json():null)));}catch{}$('#catalog-count').textContent=cards.length.toLocaleString();seriesOptions();filter();renderDock();renderSetup();if(activeView==='decks')renderDeck();if(match){$('#match-setup').hidden=true;renderMatch();}const index=await fetch('data/index.json').then(r=>r.json()),all=[];let next=0;async function load(){while(next<index.chunks.length){const f=index.chunks[next++],r=await fetch('data/'+f);if(!r.ok)throw Error('A catalog section could not load. Reload to retry.');all.push(...await r.json());}}await Promise.all([load(),load(),load()]);cards=[...new Map([...cards,...all].map(c=>[c.id,c])).values()];catalog=new Map(cards.map(c=>[c.id,c]));rebuildPresentation();catalogReady=true;$('#catalog-count').textContent=cards.length.toLocaleString();seriesOptions();filter();renderDock();if(activeView==='decks')renderDeck();renderSetup();if(match){if(resolver.auto(match).enabled)resolver.run(match);persist('ws-match',match);renderMatch();}}catch(e){$('#results').textContent=e.message;toast(e.message);}}init();
+async function init(){try{const [sample,names,references,cov,jpNames,jpTexts]=await Promise.all(['cards','series-names','translation-references','coverage','japanese-names-v1','japanese-texts-v1'].map(f=>fetch('data/'+f+'.json').then(r=>{if(!r.ok)throw Error('Could not load '+f);return r.json();})));seriesNames=names;translationReferences={references:references.references,names:jpNames,texts:jpTexts};cards=[...new Map([...cards,...sample].map(c=>[c.id,c])).values()];catalog=new Map(cards.map(c=>[c.id,c]));coverage=cov;rebuildPresentation();try{[restrictions,jpRestrictions]=await Promise.all(['restrictions','jp-restrictions'].map(f=>fetch('data/'+f+'.json').then(r=>r.ok?r.json():null)));}catch{}$('#catalog-count').textContent=cards.length.toLocaleString();seriesOptions();filter();renderDock();renderSetup();if(activeView==='decks')renderDeck();if(match){$('#match-setup').hidden=true;renderMatch();}const index=await fetch('data/index.json').then(r=>r.json()),all=[];let next=0;async function load(){while(next<index.chunks.length){const f=index.chunks[next++],r=await fetch('data/'+f);if(!r.ok)throw Error('A catalog section could not load. Reload to retry.');all.push(...await r.json());}}await Promise.all([load(),load(),load()]);cards=[...new Map([...cards,...all].map(c=>[c.id,c])).values()];catalog=new Map(cards.map(c=>[c.id,c]));rebuildPresentation();catalogReady=true;$('#catalog-count').textContent=cards.length.toLocaleString();seriesOptions();filter();renderDock();if(activeView==='decks')renderDeck();renderSetup();if(match){if(resolver.auto(match).enabled)resolver.run(match);persist('ws-match',match);renderMatch();}}catch(e){$('#results').textContent=e.message;toast(e.message);}}const catalogLoading=init();
 
 mountOnline({updateInspector:()=>design?.onView(activeView),view,toast,dialog:showDialog,inspect,card:id=>catalog.get(id),name:id=>catalog.has(id)?displayName(catalog.get(id)):id,image:id=>catalog.has(id)?img(catalog.get(id)):"<span class=card-back>W</span>",zoneName,saved:()=>saved,draft:()=>structuredClone(draft),loadDraft:(d,remember=true)=>{draft=structuredClone(d);if(remember)saveDraft();renderDeck();},catalogReady:()=>catalogReady});
