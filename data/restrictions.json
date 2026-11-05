@@ -1,0 +1,763 @@
+{
+  "date": "2026-11-04",
+  "source": "https://en.ws-tcg.com/rules/deck/",
+  "limits": [
+    {
+      "name": "Rascal Does Not Dream",
+      "limit": 2,
+      "codes": [
+        "SBY/W114-E049"
+      ]
+    },
+    {
+      "name": "The Seven Deadly Sins",
+      "limit": 2,
+      "codes": [
+        "SDS/SX05-001"
+      ]
+    },
+    {
+      "name": "Nazarick: Tomb of the Undead",
+      "limit": 1,
+      "codes": [
+        "OVL/S99-E032"
+      ]
+    },
+    {
+      "name": "hololive Production",
+      "limit": 2,
+      "codes": [
+        "HOL/W104-E113"
+      ]
+    },
+    {
+      "name": "hololive Production",
+      "limit": 0,
+      "codes": [
+        "HOL/W104-E099"
+      ]
+    },
+    {
+      "name": "Chainsaw Man",
+      "limit": 2,
+      "codes": [
+        "CSM/S96-E029"
+      ]
+    },
+    {
+      "name": "Avatar: The Last Airbender",
+      "limit": 0,
+      "codes": [
+        "ATLA/WX04-082"
+      ]
+    },
+    {
+      "name": "Sword Art Online",
+      "limit": 0,
+      "codes": [
+        "SAO/S100-E011"
+      ]
+    },
+    {
+      "name": "Date A Live",
+      "limit": 2,
+      "codes": [
+        "DAL/W79-E053"
+      ]
+    },
+    {
+      "name": "Fate combined copy limit",
+      "limit": 4,
+      "codes": [
+        "FS/S64-E081",
+        "FS/S64-E081R",
+        "FZ/S17-E030",
+        "FS/S77-E014",
+        "FS/S77-E014R"
+      ]
+    }
+  ],
+  "choices": [
+    {
+      "title": "BanG Dream!",
+      "choose": 1,
+      "options": [
+        [
+          "BD/W125-E010"
+        ],
+        [
+          "BD/W47-E082"
+        ],
+        [
+          "BD/W54-E065",
+          "BD/W125-E063"
+        ]
+      ]
+    },
+    {
+      "title": "The Quintessential Quintuplets",
+      "choose": 1,
+      "options": [
+        [
+          "5HY/W90-E053"
+        ],
+        [
+          "5HY/W83-E100"
+        ],
+        [
+          "5HY/W90-E061"
+        ],
+        [
+          "5HY/W90-E052"
+        ],
+        [
+          "5HY/WE43-E23"
+        ]
+      ]
+    },
+    {
+      "title": "The Seven Deadly Sins",
+      "choose": 1,
+      "options": [
+        [
+          "SDS/SX03-033"
+        ],
+        [
+          "SDS/SX05-097"
+        ],
+        [
+          "SDS/SX03-038"
+        ],
+        [
+          "SDS/SX05-004"
+        ]
+      ]
+    },
+    {
+      "title": "That Time I Got Reincarnated as a Slime",
+      "choose": 1,
+      "options": [
+        [
+          "TSK/S70-E065"
+        ],
+        [
+          "TSK/S101-E077"
+        ],
+        [
+          "TSK/S101-E080"
+        ]
+      ]
+    },
+    {
+      "title": "Nazarick: Tomb of the Undead",
+      "choose": 1,
+      "options": [
+        [
+          "OVL/S62-E062"
+        ],
+        [
+          "OVL/S99-E039"
+        ],
+        [
+          "OVL/S99-E028"
+        ],
+        [
+          "OVL/S99-E104",
+          "OVL/S99-E106"
+        ],
+        [
+          "OVL/S99-E027"
+        ]
+      ]
+    },
+    {
+      "title": "hololive Production",
+      "choose": 1,
+      "options": [
+        [
+          "HOL/W91-E057"
+        ],
+        [
+          "HOL/W104-E040"
+        ],
+        [
+          "HOL/W104-E069"
+        ]
+      ]
+    },
+    {
+      "title": "Chainsaw Man",
+      "choose": 1,
+      "options": [
+        [
+          "CSM/S96-E085"
+        ],
+        [
+          "CSM/S96-E086"
+        ]
+      ]
+    },
+    {
+      "title": "Batman Ninja",
+      "choose": 1,
+      "options": [
+        [
+          "BNJ/SX01-A11"
+        ],
+        [
+          "BNJ/SX01-087"
+        ]
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "Adventure Time",
+      "codes": [
+        "AT"
+      ]
+    },
+    {
+      "name": "Angel Beats! Re:Edit",
+      "codes": [
+        "AB"
+      ]
+    },
+    {
+      "name": "Avatar: The Last Airbender",
+      "codes": [
+        "ATLA"
+      ]
+    },
+    {
+      "name": "Ayakashi Triangle",
+      "codes": [
+        "AYT"
+      ]
+    },
+    {
+      "name": "Blue Archive",
+      "codes": [
+        "BAV"
+      ]
+    },
+    {
+      "name": "BanG Dream!, BanG Dream! Girls Band Party!, BanG Dream! [MyGO!!!!!], BanG Dream! [Ave Mujica]",
+      "codes": [
+        "BD"
+      ]
+    },
+    {
+      "name": "BOCCHI THE ROCK!",
+      "codes": [
+        "BTR"
+      ]
+    },
+    {
+      "name": "Cardcaptor Sakura : Clear Card",
+      "codes": [
+        "CCS"
+      ]
+    },
+    {
+      "name": "Date A Live, Date A Bullet",
+      "codes": [
+        "DAL",
+        "Fdl"
+      ]
+    },
+    {
+      "name": "Dengeki Bunko",
+      "codes": [
+        "Gid",
+        "Gtd",
+        "Grk",
+        "Gem",
+        "Goi",
+        "Gss",
+        "Gok",
+        "Ghm",
+        "Gny",
+        "Gby",
+        "Gds",
+        "Gas",
+        "Gdy",
+        "Gnh",
+        "Gsr",
+        "Gos",
+        "Gmm",
+        "Gsp",
+        "Gdc",
+        "Gms",
+        "Glt"
+      ]
+    },
+    {
+      "name": "Fujimi Fantasia Bunko",
+      "codes": [
+        "F35",
+        "Fab",
+        "Fdd",
+        "Fdl",
+        "Fii",
+        "Fkz",
+        "Fmr",
+        "Fos",
+        "Foy",
+        "Fra",
+        "Fsi",
+        "Fsl",
+        "Ftr"
+      ]
+    },
+    {
+      "name": "hololive Production",
+      "codes": [
+        "HOL"
+      ]
+    },
+    {
+      "name": "KONOSUBA -God’s blessing on this wonderful world!",
+      "codes": [
+        "KS"
+      ]
+    },
+    {
+      "name": "Love Live!",
+      "codes": [
+        "LL",
+        "LSF",
+        "SIL"
+      ]
+    },
+    {
+      "name": "Love Live! Nijigasaki High School Idol Club!!",
+      "codes": [
+        "LSF",
+        "LNJ",
+        "SIN"
+      ]
+    },
+    {
+      "name": "Love Live! Sunshine!!",
+      "codes": [
+        "SIS",
+        "LSF",
+        "LSS"
+      ]
+    },
+    {
+      "name": "Love Live! Superstar!!",
+      "codes": [
+        "LSF",
+        "SIP",
+        "LSP"
+      ]
+    },
+    {
+      "name": "Lycoris Recoil",
+      "codes": [
+        "LRC"
+      ]
+    },
+    {
+      "name": "Miss Kobayashi’s Dragon Maid",
+      "codes": [
+        "KMD"
+      ]
+    },
+    {
+      "name": "-NISEKOI-False Love",
+      "codes": [
+        "NK"
+      ]
+    },
+    {
+      "name": "Puella Magi Madoka Magica",
+      "codes": [
+        "MM",
+        "MR"
+      ]
+    },
+    {
+      "name": "Rascal Does Not Dream of Bunny Girl Senpai",
+      "codes": [
+        "SBY",
+        "Gby"
+      ]
+    },
+    {
+      "name": "Rent-A-Girlfriend",
+      "codes": [
+        "KNK"
+      ]
+    },
+    {
+      "name": "RWBY",
+      "codes": [
+        "RWBY"
+      ]
+    },
+    {
+      "name": "Saekano: How to Raise a Boring Girlfriend",
+      "codes": [
+        "SHS"
+      ]
+    },
+    {
+      "name": "Shakugan no Shana",
+      "codes": [
+        "SS",
+        "Gss"
+      ]
+    },
+    {
+      "name": "THE IDOLM@STER CINDERELLA GIRLS",
+      "codes": [
+        "IMC"
+      ]
+    },
+    {
+      "name": "The Melancholy of Haruhi Suzumiya",
+      "codes": [
+        "SY"
+      ]
+    },
+    {
+      "name": "To Loveru Darkness 2nd",
+      "codes": [
+        "TL"
+      ]
+    },
+    {
+      "name": "The Quintessential Quintuplets",
+      "codes": [
+        "5HY"
+      ]
+    },
+    {
+      "name": "Accel・World",
+      "codes": [
+        "AW",
+        "Gaw"
+      ]
+    },
+    {
+      "name": "Arifureta: From Commonplace to World’s Strongest",
+      "codes": [
+        "ARI"
+      ]
+    },
+    {
+      "name": "Attack on Titan",
+      "codes": [
+        "AOT"
+      ]
+    },
+    {
+      "name": "Azur Lane",
+      "codes": [
+        "AZL"
+      ]
+    },
+    {
+      "name": "Batman Ninja",
+      "codes": [
+        "BNJ"
+      ]
+    },
+    {
+      "name": "BOFURI: I Don’t Want to Get Hurt, so I’ll Max Out My Defense.",
+      "codes": [
+        "BFR"
+      ]
+    },
+    {
+      "name": "Chainsaw Man",
+      "codes": [
+        "CSM"
+      ]
+    },
+    {
+      "name": "Dengeki Bunko",
+      "codes": [
+        "Gmr",
+        "Gaw",
+        "Gso",
+        "Gbc",
+        "Gdr",
+        "Gsb",
+        "Gnm",
+        "G86",
+        "Ggh",
+        "Gkb",
+        "Ggg",
+        "Gmf",
+        "Gbl",
+        "Gc3",
+        "Gns",
+        "Gga",
+        "Gom",
+        "Gbb",
+        "Gsd",
+        "Gfq",
+        "Gsk",
+        "Ghh",
+        "Gsc",
+        "Gkm",
+        "Ggu",
+        "Gsr",
+        "Gyf",
+        "Gbd",
+        "Giy",
+        "Gkl"
+      ]
+    },
+    {
+      "name": "Detective Opera Milky Holmes",
+      "codes": [
+        "MK"
+      ]
+    },
+    {
+      "name": "Disgaea",
+      "codes": [
+        "DG"
+      ]
+    },
+    {
+      "name": "Disney Mirrorverse",
+      "codes": [
+        "MRd",
+        "MRp"
+      ]
+    },
+    {
+      "name": "Fairy Tail",
+      "codes": [
+        "FT"
+      ]
+    },
+    {
+      "name": "Fate/Apocrypha",
+      "codes": [
+        "APO"
+      ]
+    },
+    {
+      "name": "Fate/Grand Order",
+      "codes": [
+        "FGO"
+      ]
+    },
+    {
+      "name": "Fate/kaleid liner PRISMA ILLYA",
+      "codes": [
+        "PI"
+      ]
+    },
+    {
+      "name": "Frieren: Beyond Journey's End",
+      "codes": [
+        "SFN"
+      ]
+    },
+    {
+      "name": "Goblin Slayer",
+      "codes": [
+        "GBS"
+      ]
+    },
+    {
+      "name": "Guilty Gear -Strive-",
+      "codes": [
+        "GGST"
+      ]
+    },
+    {
+      "name": "GURREN LAGANN",
+      "codes": [
+        "GL"
+      ]
+    },
+    {
+      "name": "Hatsune Miku -Project DIVA-",
+      "codes": [
+        "PD"
+      ]
+    },
+    {
+      "name": "Hatsune Mike: Colorful Stage",
+      "codes": [
+        "PJS"
+      ]
+    },
+    {
+      "name": "Is It Wrong to Try to Pick Up Girls in a Dungeon?",
+      "codes": [
+        "DDM"
+      ]
+    },
+    {
+      "name": "JoJo's Bizarre Adventure",
+      "codes": [
+        "JJ"
+      ]
+    },
+    {
+      "name": "Kaguya-sama: Love is War",
+      "codes": [
+        "KGL"
+      ]
+    },
+    {
+      "name": "Kancolle",
+      "codes": [
+        "KC"
+      ]
+    },
+    {
+      "name": "KILL la KILL",
+      "codes": [
+        "KLK"
+      ]
+    },
+    {
+      "name": "LOG HORIZON",
+      "codes": [
+        "LH"
+      ]
+    },
+    {
+      "name": "MACROSS Delta",
+      "codes": [
+        "MDE"
+      ]
+    },
+    {
+      "name": "MARVEL",
+      "codes": [
+        "MAR"
+      ]
+    },
+    {
+      "name": "Mob Psycho 100",
+      "codes": [
+        "MOB"
+      ]
+    },
+    {
+      "name": "MONOGATARI Series (BAKEMONOGATARI, NISEMONOGATARI)",
+      "codes": [
+        "BM",
+        "NM"
+      ]
+    },
+    {
+      "name": "Mushoku Tensei: Jobless Reincarnation",
+      "codes": [
+        "MTI"
+      ]
+    },
+    {
+      "name": "No Game No Life",
+      "codes": [
+        "NGL"
+      ]
+    },
+    {
+      "name": "GODDESS OF VICTORY: NIKKE",
+      "codes": [
+        "NIK"
+      ]
+    },
+    {
+      "name": "[OSHI NO KO]",
+      "codes": [
+        "OSK"
+      ]
+    },
+    {
+      "name": "Nazarick: Tomb of the Undead",
+      "codes": [
+        "OVL"
+      ]
+    },
+    {
+      "name": "Persona",
+      "codes": [
+        "P3",
+        "P4",
+        "P5"
+      ]
+    },
+    {
+      "name": "Pixar",
+      "codes": [
+        "PXR"
+      ]
+    },
+    {
+      "name": "Rurouni Kenshin",
+      "codes": [
+        "RKN"
+      ]
+    },
+    {
+      "name": "Revue Starlight",
+      "codes": [
+        "RSL"
+      ]
+    },
+    {
+      "name": "Re:ZERO -Starting Life in Another World-",
+      "codes": [
+        "RZ"
+      ]
+    },
+    {
+      "name": "SPY x FAMILY",
+      "codes": [
+        "SPY"
+      ]
+    },
+    {
+      "name": "Sword Art Online",
+      "codes": [
+        "SAO",
+        "Gso"
+      ]
+    },
+    {
+      "name": "Sword Art Online Alternative – Gun Gale Online –",
+      "codes": [
+        "GGO",
+        "Ggg"
+      ]
+    },
+    {
+      "name": "The Fruit of Grisaia",
+      "codes": [
+        "GRI"
+      ]
+    },
+    {
+      "name": "The Seven Deadly Sins",
+      "codes": [
+        "SDS"
+      ]
+    },
+    {
+      "name": "That Time I Got Reincarnated as a Slime",
+      "codes": [
+        "TSK"
+      ]
+    },
+    {
+      "name": "Tokyo Revengers",
+      "codes": [
+        "TRV"
+      ]
+    }
+  ]
+}

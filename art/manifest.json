@@ -1,0 +1,34 @@
+[
+  {
+    "key": "decks",
+    "series": "Fate",
+    "card": "“Excalibur” Saber",
+    "code": "FS/S36-E002",
+    "source": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/f/fs_s36/FS_S36_E002.png",
+    "path": "art/decks.png"
+  },
+  {
+    "key": "practice",
+    "series": "Sword Art Online",
+    "card": "《Black Swordsman》 Kirito",
+    "code": "SAO/S20-E077",
+    "source": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_E077.png",
+    "path": "art/practice.png"
+  },
+  {
+    "key": "host",
+    "series": "KonoSuba",
+    "card": "“Detonative Dame” Megumin",
+    "code": "KS/W55-E043",
+    "source": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/k/ks_w55/KS_W55_E043.png",
+    "path": "art/host-konosuba.png"
+  },
+  {
+    "key": "join",
+    "series": "RWBY",
+    "card": "Ruby Rose",
+    "code": "RWBY/WX03-044",
+    "source": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/updates/errata/WS_RWBY_WX03_044%20(E).png",
+    "path": "art/join.png"
+  }
+]

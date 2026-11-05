@@ -1,0 +1,58 @@
+{
+  "updated": "2026-11-04T09:03:53.465Z",
+  "english": 32464,
+  "japanese": 66463,
+  "englishOfficialPages": 2094,
+  "englishExpectedPages": 2094,
+  "japanesePages": 665,
+  "japaneseExpectedPages": 665,
+  "officialJapaneseExpected": 66463,
+  "officialEnglishExpected": 31407,
+  "complete": false,
+  "failures": [],
+  "notes": [
+    "Japanese official catalog: 665/665 result pages imported. All source variations retained by official record ID.",
+    "English official catalog: 2094/2094 pages imported, supplemented by 167-file community mirror.",
+    "Publicly listed records may include previews; release-date reconciliation is pending.",
+    "Promo and parallel records are retained when listed. Historical missing prints and all artwork URLs have not been exhaustively audited.",
+    "English traits are available from the mirror where matched; official result pages omit traits.",
+    "Weiß Schwarz Blau and Rose are separate games and are excluded.",
+    "EN restriction snapshot plus JP Neo Standard and Standard/Side lists fetched November 4, 2026; conditional exceptions and special construction text require review.",
+    "One supplemental English promo uses a lower-resolution TCGplayer-hosted scan from the source mirror rather than Bushiroad hosting (PI/S04-PE03).",
+    "Japanese name translations: 66,463 / 66,463 imported Japanese records have an English name attached. 3,277 use explicitly labeled, unreviewed machine translation. Official/community/machine sources are distinguished. This covers names only; missing ability text remains flagged.",
+    "Inline English gameplay text: attached for all 66,463 imported Japanese records, including no-ability printings. Official-equivalent text is preferred; other text is clearly labeled unofficial or machine-assisted/unreviewed. This is display text and does not expand automatic ability support. External translation embeds have been removed."
+  ],
+  "artworkSample": {
+    "checked": 124,
+    "passed": 124,
+    "exhaustive": false
+  },
+  "unclassifiedJapaneseRecords": 5,
+  "nameTranslations": {
+    "japaneseRecords": 66463,
+    "attachedNames": 66463,
+    "missingNames": 0,
+    "sourceCounts": {
+      "hotc": 3694,
+      "community": 31914,
+      "official": 27578,
+      "ai": 1682,
+      "machine": 1595
+    },
+    "unreviewedMachineRecords": 3277,
+    "uncertainProperNameRecords": 561
+  },
+  "inlineEnglish": {
+    "japaneseRecords": 66463,
+    "recordsWithInlineEnglishText": 66463,
+    "missingRecords": 0,
+    "counts": {
+      "official": 26900,
+      "community": 16724,
+      "machine": 21434,
+      "vanilla": 1405
+    },
+    "uniqueAbilityStrings": 19876,
+    "sourceArtifacts": 0
+  }
+}

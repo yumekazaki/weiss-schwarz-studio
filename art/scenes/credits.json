@@ -1,0 +1,39 @@
+{
+  "method": "Layered illustrations with CSS environmental motion and SVG displacement; no video assets or independent character blinking.",
+  "scenes": {
+    "decks": {
+      "file": "fate.jpg",
+      "origin": "AI-created fan illustration",
+      "prompt": "Excalibur upright in a luminous windswept grassy plain, clouds and dawn rays."
+    },
+    "practice": {
+      "file": "sao-family-v2.jpg",
+      "origin": "AI-created fan illustration",
+      "subjects": [
+        "Kirito",
+        "Asuna",
+        "Yui"
+      ],
+      "prompt": "Kirito and Asuna sitting together on a grassy hill with Yui between them, peaceful family scene, clouds, wildflowers and warm light.",
+      "motion": [
+        "Independent cloud wisps",
+        "Aligned foreground grass displacement",
+        "Warm atmospheric light",
+        "Gentle scene depth"
+      ],
+      "limitations": "No independent character blinking or frame-by-frame character animation."
+    },
+    "host": {
+      "file": "konosuba.jpg",
+      "origin": "AI-created fan illustration",
+      "prompt": "Kazuma, Megumin, Aqua and Darkness at an adventurers guild table in Axel, wholesome warm sunset."
+    },
+    "join": {
+      "file": "rwby.jpg",
+      "origin": "AI-created fan illustration",
+      "prompt": "Ruby, Weiss, Blake and Yang at Beacon Academy holding their weapons; Crescent Rose reference correction."
+    }
+  },
+  "tool": "Built-in image_gen",
+  "officialCards": "../manifest.json"
+}

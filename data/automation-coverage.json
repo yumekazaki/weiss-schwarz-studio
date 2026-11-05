@@ -1,0 +1,22 @@
+{
+  "rules": "English v2.10, 2025-09-17",
+  "supportedAbilityRecords": 9296,
+  "families": {
+    "backup": 1748,
+    "entry-target": 188,
+    "global": 5262,
+    "assist": 1017,
+    "self": 1079,
+    "attack-self": 2
+  },
+  "unsupportedTriggers": [
+    "FOCUS",
+    "BUSHI",
+    "DISCOVERY",
+    "CHANCE",
+    "BLUE",
+    "YELLOW",
+    "malformed source labels"
+  ],
+  "notes": "Exact supported ability text only; recognizing one line does not automate all abilities on that card."
+}

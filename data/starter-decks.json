@@ -1,0 +1,701 @@
+{
+  "decks": [
+    {
+      "id": "builtin-sao-trial-2013",
+      "name": "Trial Deck Sword Art Online — English Edition (2013)",
+      "language": "EN",
+      "format": "Neo Standard",
+      "cards": {
+        "en:SAO/S20-E101": 1,
+        "en:SAO/S20-E102": 1,
+        "en:SAO/S20-E103": 2,
+        "en:SAO/S20-E104": 2,
+        "en:SAO/S20-E105": 4,
+        "en:SAO/S20-TE01": 2,
+        "en:SAO/S20-TE02": 4,
+        "en:SAO/S20-TE03": 2,
+        "en:SAO/S20-TE04": 2,
+        "en:SAO/S20-TE05": 2,
+        "en:SAO/S20-TE06": 2,
+        "en:SAO/S20-TE07": 4,
+        "en:SAO/S20-TE08": 4,
+        "en:SAO/S20-TE09": 4,
+        "en:SAO/S20-TE10": 4,
+        "en:SAO/S20-TE11": 2,
+        "en:SAO/S20-TE12": 2,
+        "en:SAO/S20-TE13": 4,
+        "en:SAO/S20-TE14": 2
+      },
+      "included": true,
+      "provenance": {
+        "product": "https://en.ws-tcg.com/products/td-sao/",
+        "quantities": "https://weissschwarz.fandom.com/wiki/Sword_Art_Online_(Trial_Deck)",
+        "released": "2013-07-05",
+        "note": "Original preconstructed configuration. Card identities and gameplay text verified against the official English catalog; quantities transcribed from the complete published community checklist."
+      }
+    }
+  ],
+  "cards": [
+    {
+      "name": "&#60;&#60;Lead Group&#62;&#62; Asuna",
+      "code": "SAO/S20-E101",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "1",
+      "cost": "1",
+      "power": "6500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【AUTO】 This ability activates up to two times per turn. When you use an 【ACT】, this card gets +1000 power until end of turn."
+      ],
+      "flavor_text": "But, I want to go back.\nThere are lots of things I never had the chance to do there.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "E101",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_E101.png",
+      "id": "en:SAO/S20-E101",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "&#60;&#60;Lead Group&#62;&#62; Kirito",
+      "code": "SAO/S20-E102",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "2",
+      "cost": "1",
+      "power": "5000",
+      "soul": 1,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【CONT】 All of your other 《Avatar》 or 《Net》 characters get +1000 power.\n【AUTO】 When this card is placed on stage from your hand, look at the top card of your deck, and put it on the top or the bottom of your deck."
+      ],
+      "flavor_text": "Unless we do our best, it isn't fair to the merchants and others who are supporting us.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "E102",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_E102.png",
+      "id": "en:SAO/S20-E102",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "&#60;&#60;Beater&#62;&#62; Kirito",
+      "code": "SAO/S20-E103",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "0",
+      "cost": "0",
+      "power": "2500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【ACT】[(1)］ Choose one of your 《Avatar》 or 《Net》 characters, and that character gets +1500 power until end of turn."
+      ],
+      "flavor_text": "From now on, don't confuse me with the other testers.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "E103",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_E103.png",
+      "id": "en:SAO/S20-E103",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Kirito & Asuna",
+      "code": "SAO/S20-E104",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "3",
+      "cost": "2",
+      "power": "10000",
+      "soul": 2,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【CONT】 During your opponent's turn, this card gets +1000 power.\n【AUTO】 When this card is frontal attacked, look at the top card of your deck, and put it on the top of your deck or into your waiting room.\n【ACT】[(1)］ This card gets +1000 power until end of your opponent's next turn."
+      ],
+      "flavor_text": "Asuna: \"Even if I get killed by a monster, I don't want to lose to this game… To this world. No matter what.\"",
+      "set": "SAO",
+      "release": "20",
+      "sid": "E104",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_E104.png",
+      "id": "en:SAO/S20-E104",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Asuna Enters the Underground Dungeon",
+      "code": "SAO/S20-E105",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "1",
+      "cost": "0",
+      "power": "5000",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【AUTO】 Accelerate ［Put the top card of your deck into your clock］ At the beginning of your climax phase, you may pay the cost. If you do, this card gets +3500 power until end of turn."
+      ],
+      "flavor_text": "Take care of Yui! You three should run!",
+      "set": "SAO",
+      "release": "20",
+      "sid": "E105",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_E105.png",
+      "id": "en:SAO/S20-E105",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Asuna Jumps to Conclusions",
+      "code": "SAO/S20-TE01",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "0",
+      "cost": "0",
+      "power": "2500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【CONT】 During your turn, this card gets +1000 power."
+      ],
+      "flavor_text": "D-Don't look over here……",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE01",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE01.png",
+      "id": "en:SAO/S20-TE01",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Asuna - Start of the Battle",
+      "code": "SAO/S20-TE02",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "0",
+      "cost": "0",
+      "power": "3000",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "-"
+      ],
+      "flavor_text": "So I'll accept your offer, and take it easy today.\nYou can play at forward!",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE02",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE02.png",
+      "id": "en:SAO/S20-TE02",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Heathcliff's Hidden Identity",
+      "code": "SAO/S20-TE03",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "1",
+      "cost": "1",
+      "power": "7000",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "-"
+      ],
+      "flavor_text": "Kirito, I must reward you for deducing my identity. I shall give you a chance.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE03",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE03.png",
+      "id": "en:SAO/S20-TE03",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Asuna Replies to a Proposal",
+      "code": "SAO/S20-TE04",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "2",
+      "cost": "1",
+      "power": "3500",
+      "soul": 1,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【CONT】 Assist All of your characters in front of this card get +1000 power.\n【AUTO】 When this card is placed on stage from your hand, reveal the top card of your deck. If that card is an 《Avatar》 or 《Net》 character, choose one of your characters, and that character gets +1 soul until end of turn. （The revealed cards are returned to their original place.)"
+      ],
+      "flavor_text": "…… Yes.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE04",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE04.png",
+      "id": "en:SAO/S20-TE04",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Asuna's Veteran Cooking Skill",
+      "code": "SAO/S20-TE05",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "2",
+      "cost": "2",
+      "power": "8500",
+      "soul": 2,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【CONT】 During your turn, if the number of other 《Avatar》 characters you have is two or more, this card gets +1 level and +1500 power."
+      ],
+      "flavor_text": "That takes care of the stew.\nI'll make some side dishes.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE05",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE05.png",
+      "id": "en:SAO/S20-TE05",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "&#60;&#60;Star Splash&#62;&#62;",
+      "code": "SAO/S20-TE06",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Climax",
+      "color": "YELLOW",
+      "level": "-",
+      "cost": "-",
+      "power": "-",
+      "soul": 0,
+      "trigger": [
+        "SOUL",
+        "BOUNCE"
+      ],
+      "attributes": [
+        ""
+      ],
+      "ability": [
+        "【CONT】 All of your characters get +1000 power and +1 soul.\n\n\n(: When this card triggers, you may choose one of your opponent's characters, and return it to your opponent's hand.)"
+      ],
+      "flavor_text": "Yaaaa!!",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE06",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE06.png",
+      "id": "en:SAO/S20-TE06",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Kirito - Start of the Battle",
+      "code": "SAO/S20-TE07",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "0",
+      "cost": "0",
+      "power": "3000",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "-"
+      ],
+      "flavor_text": "W-Wait a second, we take turns as forward!",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE07",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE07.png",
+      "id": "en:SAO/S20-TE07",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Their Child, Yui",
+      "code": "SAO/S20-TE08",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "0",
+      "cost": "0",
+      "power": "500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Net",
+        "-"
+      ],
+      "ability": [
+        "【CONT】 Assist All of your characters in front of this card get +500 power.\n【ACT】［【REST】 this card］ Choose one of your characters with \"Kirito(キリト)\" or \"Asuna(アスナ)\" in its card name, and that character gets +500 power until end of turn."
+      ],
+      "flavor_text": "I want the same one as daddy.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE08",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE08.png",
+      "id": "en:SAO/S20-TE08",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Lovely Girl, Yui",
+      "code": "SAO/S20-TE09",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "1",
+      "cost": "0",
+      "power": "5500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "Net",
+        "-"
+      ],
+      "ability": [
+        "-"
+      ],
+      "flavor_text": "It's good.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE09",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE09.png",
+      "id": "en:SAO/S20-TE09",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Kirito Joins the Knights of the Blood Oath",
+      "code": "SAO/S20-TE10",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "2",
+      "cost": "1",
+      "power": "8000",
+      "soul": 1,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【CONT】 During your opponent's turn, this card gets +1000 power."
+      ],
+      "flavor_text": "……D-Didn't I request something that wasn't so flashy……",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE10",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE10.png",
+      "id": "en:SAO/S20-TE10",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Axe Warrior, Agil",
+      "code": "SAO/S20-TE11",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "2",
+      "cost": "2",
+      "power": "9000",
+      "soul": 2,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "-"
+      ],
+      "flavor_text": "You should be happy to see me.\nI shut my shop down to come and help.",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE11",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE11.png",
+      "id": "en:SAO/S20-TE11",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "Kirito - Snow Mountain on Floor 55",
+      "code": "SAO/S20-TE12",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Character",
+      "color": "BLUE",
+      "level": "2",
+      "cost": "1",
+      "power": "2500",
+      "soul": 1,
+      "trigger": [
+        "SOUL"
+      ],
+      "attributes": [
+        "Avatar",
+        "Weapon"
+      ],
+      "ability": [
+        "【ACT】【COUNTER】 Backup 3000, Level 2 [(1) Put this card from your hand into your waiting room] (Choose one of your characters that is being frontal attacked, and that character gets +3000 power until end of turn.)"
+      ],
+      "flavor_text": "Get over there, and hide!",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE12",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE12.png",
+      "id": "en:SAO/S20-TE12",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "End of the World",
+      "code": "SAO/S20-TE13",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Climax",
+      "color": "BLUE",
+      "level": "-",
+      "cost": "-",
+      "power": "-",
+      "soul": 0,
+      "trigger": [
+        "SOUL",
+        "SOUL"
+      ],
+      "attributes": [
+        ""
+      ],
+      "ability": [
+        "【AUTO】 When this card is placed on your climax area from your hand, draw a card, choose one of your characters, and that character gets +2000 power and +1 soul until end of turn."
+      ],
+      "flavor_text": "Asuna: \"Thank you…… I love you……\"",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE13",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE13.png",
+      "id": "en:SAO/S20-TE13",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "name": "&#60;&#60;Dual-wielding&#62;&#62; User",
+      "code": "SAO/S20-TE14",
+      "rarity": "TD",
+      "expansion": "Sword Art Online",
+      "side": "S",
+      "type": "Climax",
+      "color": "BLUE",
+      "level": "-",
+      "cost": "-",
+      "power": "-",
+      "soul": 0,
+      "trigger": [
+        "DRAW"
+      ],
+      "attributes": [
+        ""
+      ],
+      "ability": [
+        "【CONT】 All of your characters get +1000 power and +1 soul.\n\n\n(: When this card triggers, you may draw a card.)"
+      ],
+      "flavor_text": "Wwwoooooaaah!!",
+      "set": "SAO",
+      "release": "20",
+      "sid": "TE14",
+      "image": "https://en.ws-tcg.com/wordpress/wp-content/images/cardimages/s/sao_s20/SAO_S20_TE14.png",
+      "id": "en:SAO/S20-TE14",
+      "language": "EN",
+      "source": "Bushiroad English card list",
+      "series": "SAO",
+      "variant": "TD"
+    },
+    {
+      "id": "jp:2330",
+      "code": "DC/W01-001",
+      "name": "学園長のさくら",
+      "language": "JP",
+      "source": "Bushiroad Japanese card list",
+      "series": "DC",
+      "expansion": "1",
+      "rarity": "RR",
+      "variant": "0",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "0",
+      "cost": "0",
+      "power": "500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "魔法"
+      ],
+      "ability": [
+        "【自】 絆／「桜内 義之」 ［(1)］ （このカードがプレイされて舞台に置かれた時、あなたはコストを払ってよい。そうしたら、あなたは自分の控え室の「桜内 義之」を1枚選び、手札に戻す）\n【起】［(1) このカードを【レスト】する］ あなたは《魔法》の自分のキャラを1枚選び、そのターン中、ソウルを＋1。"
+      ],
+      "image": "https://ws-tcg.com/wordpress/wp-content/images/cardlist/d/dc_w01/dc_w01_001.png",
+      "side": "W"
+    },
+    {
+      "id": "jp:16368",
+      "code": "SAO/S20-T01",
+      "name": "早とちり アスナ",
+      "language": "JP",
+      "source": "Bushiroad Japanese card list",
+      "series": "SAO",
+      "expansion": "67",
+      "rarity": "TD",
+      "variant": "0",
+      "type": "Character",
+      "color": "YELLOW",
+      "level": "0",
+      "cost": "0",
+      "power": "2500",
+      "soul": 1,
+      "trigger": [],
+      "attributes": [
+        "アバター",
+        "武器"
+      ],
+      "ability": [
+        "【永】 あなたのターン中、このカードのパワーを＋1000。"
+      ],
+      "image": "https://ws-tcg.com/wordpress/wp-content/images/cardlist/s/sao_s20/sao_s20_t01.png",
+      "side": "S"
+    }
+  ]
+}

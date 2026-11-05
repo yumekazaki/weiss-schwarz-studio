@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1100" fill="none">
+<defs>
+ <linearGradient id="sky" x2="0" y2="1100" gradientUnits="userSpaceOnUse"><stop stop-color="#151434"/><stop offset=".38" stop-color="#39366c"/><stop offset=".68" stop-color="#53618b"/><stop offset="1" stop-color="#10243e"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#f8ddfa" stop-opacity=".65"/><stop offset=".4" stop-color="#d59eea" stop-opacity=".24"/><stop offset="1" stop-color="#a19bef" stop-opacity="0"/></radialGradient>
+ <linearGradient id="moon" x2="1" y2="1"><stop stop-color="#fff3dc"/><stop offset="1" stop-color="#d6c0f0"/></linearGradient>
+ <linearGradient id="ridge" x2="0" y2="1"><stop stop-color="#525887"/><stop offset="1" stop-color="#172c47"/></linearGradient>
+ <linearGradient id="lake" x2="0" y2="1"><stop stop-color="#6088ab" stop-opacity=".65"/><stop offset="1" stop-color="#13233d"/></linearGradient>
+ <linearGradient id="ribbon"><stop stop-color="#77d7e4" stop-opacity="0"/><stop offset=".4" stop-color="#77d7e4" stop-opacity=".23"/><stop offset=".7" stop-color="#c29cec" stop-opacity=".24"/><stop offset="1" stop-color="#c29cec" stop-opacity="0"/></linearGradient>
+ <filter id="soft"><feGaussianBlur stdDeviation="20"/></filter>
+ <filter id="mist"><feGaussianBlur stdDeviation="7"/></filter>
+ <g id="sakura"><ellipse rx="47" ry="31" fill="#c179b0"/><ellipse cx="31" cy="-14" rx="39" ry="29" fill="#e1a0c6"/><ellipse cx="-32" cy="-15" rx="39" ry="25" fill="#ab78ac"/><ellipse cx="-8" cy="-30" rx="36" ry="22" fill="#e6adcf"/><ellipse cx="16" cy="9" rx="32" ry="20" fill="#bc78b0"/><circle cx="-11" cy="-26" r="4" fill="#fbd6e9"/><circle cx="30" cy="-16" r="3" fill="#fbd6e9"/><circle cx="-29" cy="-6" r="3" fill="#fbd6e9"/></g>
+ <g id="star" fill="#f8e3fc"><path d="M0-6 1-1 6 0 1 1 0 6-1 1-6 0-1-1Z"/></g>
+</defs>
+<path fill="url(#sky)" d="M0 0h1800v1100H0z"/>
+<ellipse cx="1340" cy="235" rx="370" ry="340" fill="url(#halo)"/>
+<circle cx="1340" cy="235" r="103" fill="url(#moon)" opacity=".88"/>
+<g fill="#bcb1de" opacity=".18"><ellipse cx="1302" cy="213" rx="21" ry="17"/><circle cx="1383" cy="265" r="26"/><circle cx="1367" cy="190" r="14"/><ellipse cx="1319" cy="287" rx="29" ry="14"/></g>
+<g stroke="#e0ccf1" opacity=".18"><circle cx="1340" cy="235" r="126"/><circle cx="1340" cy="235" r="144" stroke-dasharray="2 13"/><path d="M1110 235h460M1340 5v460" opacity=".35"/></g>
+<path d="M-160 173C260 430 530-32 990 149s591 110 1020-35" stroke="url(#ribbon)" stroke-width="85" filter="url(#soft)"/>
+<path d="M-100 275C280 75 576 370 995 223s589 126 904 60" stroke="url(#ribbon)" stroke-width="35" filter="url(#soft)"/>
+<g fill="#d1badb" opacity=".09" filter="url(#mist)"><path d="M0 280c120-45 192-9 275-16s151-45 242-15 167-13 246 18H0Z"/><path d="M1085 373c109-51 175-25 256-36s225-45 459 12v33Z"/><path d="M462 437c117-28 182-18 254-38s180-13 302 22H462Z"/></g>
+<g opacity=".68"><use href="#star" x="220" y="160"/><use href="#star" x="625" y="117"/><use href="#star" x="865" y="273"/><use href="#star" x="1055" y="100"/><use href="#star" x="1590" y="119"/><use href="#star" x="1478" y="411"/><use href="#star" x="419" y="349"/><use href="#star" x="1698" y="310"/></g>
+<g fill="#d8dcfa" opacity=".6"><circle cx="330" cy="88" r="1.6"/><circle cx="703" cy="287" r="1.4"/><circle cx="1165" cy="135" r="1.5"/><circle cx="900" cy="70" r="1"/><circle cx="1750" cy="211" r="1.7"/><circle cx="523" cy="188" r="1.2"/><circle cx="159" cy="337" r="1"/><circle cx="1480" cy="66" r="1.4"/><circle cx="990" cy="367" r="1.5"/><circle cx="1100" cy="330" r="1.1"/></g>
+<!-- Painted mountain layers and a quiet shrine on the horizon. -->
+<path d="M0 661 178 502 296 575 490 393 638 550 790 470 945 597 1137 448 1298 575 1490 463 1663 592 1800 509V890H0Z" fill="#68648d" opacity=".48"/>
+<path d="m290 575 200-182 148 157-85-45-57-75-66 74-53 24Z" fill="#c5b6cf" opacity=".25"/>
+<path d="M0 760 172 616 337 705 567 532 781 697 948 605 1132 733 1388 554 1580 718 1800 616V1100H0Z" fill="url(#ridge)"/>
+<path d="m1113 708 40-23 91 5 48 18-52 29-80 4Z" fill="#142b43"/><path d="M1170 683v-49h58v49m-69-53 22-8h38l24 8m-81-14h79m-66 12v-22h49v22m-59-28 19-10h29l24 10m-75 4h91m-49-15v-17" stroke="#172743" stroke-width="5" fill="#23314f"/>
+<path d="M0 842c235-32 454 17 689-19s497-15 1111 17v260H0Z" fill="url(#lake)"/>
+<g stroke="#b6c2df" opacity=".16"><path d="M1008 860h365m-293 14h250m-367 25h472m-377 24h307m-404 34h499m-353 33h240"/><path d="M245 881h175m35 22h118m-427 55h295m-208 47h186" opacity=".5"/></g>
+<path d="M0 850c209-40 312-14 456-7m565-12c287-24 520 17 779-9" stroke="#cbbed9" stroke-opacity=".2" stroke-width="14" filter="url(#mist)"/>
+<!-- Sakura branches frame the scene rather than competing with the cards. -->
+<g stroke="#151c38" stroke-linecap="round"><path d="M-40 1060 30 824 82 695 116 481 174 367M56 764l149-117 100-34m-185-160L63 341-7 299M87 664 12 573m149-176 132-62m-169 91 112 36" stroke-width="20"/><path d="m174 368 46-95m-13 376 31-84m-67 109 119 17m-175-211 89 51" stroke-width="9"/></g>
+<g opacity=".65"><use href="#sakura" transform="translate(92 377) scale(1.65)"/><use href="#sakura" transform="translate(190 342) scale(1.5)"/><use href="#sakura" transform="translate(262 332) scale(1.35)"/><use href="#sakura" transform="translate(63 470) scale(1.5)"/><use href="#sakura" transform="translate(199 472) scale(1.4)"/><use href="#sakura" transform="translate(12 559) scale(1.3)"/><use href="#sakura" transform="translate(253 592) scale(1.45)"/><use href="#sakura" transform="translate(309 638) scale(1.05)"/></g>
+<g transform="translate(1800 0) scale(-1 1)" opacity=".75"><path d="M-10 1090 39 1008 81 917 121 874m-49 64 95 10m-113 18-31-55" stroke="#111c34" stroke-width="20" stroke-linecap="round"/><use href="#sakura" transform="translate(118 873) scale(1.4)"/><use href="#sakura" transform="translate(173 941) scale(1.1)"/><use href="#sakura" transform="translate(26 910) scale(1.2)"/></g>
+<path d="M0 1052c146-17 203 1 323 48H0Zm1800-23c-156 9-234 31-329 71h329Z" fill="#101a30"/>
+</svg>

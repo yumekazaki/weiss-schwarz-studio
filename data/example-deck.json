@@ -1,0 +1,21 @@
+{
+  "name": "Quintuplets · practice study",
+  "cards": {
+    "en:5HY/W101-E001": 4,
+    "en:5HY/W101-E002": 4,
+    "en:5HY/W101-E003": 4,
+    "en:5HY/W101-E004": 4,
+    "en:5HY/W101-E005": 4,
+    "en:5HY/W101-E006": 4,
+    "en:5HY/W101-E007": 4,
+    "en:5HY/W101-E008": 4,
+    "en:5HY/W101-E009": 4,
+    "en:5HY/W101-E010": 4,
+    "en:5HY/W101-E011": 2,
+    "en:5HY/W101-E021": 4,
+    "en:5HY/W101-E022": 4
+  },
+  "format": "Standard",
+  "language": "EN",
+  "schema": "ws-atelier-deck-v1"
+}

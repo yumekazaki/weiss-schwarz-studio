@@ -1,0 +1,732 @@
+{
+  "date": "2026-11-04",
+  "effective": "2026-06-27",
+  "source": "https://ws-tcg.com/rules/deck_rule/",
+  "format": "Neo Standard",
+  "rules": [
+    {
+      "title": "ダ・カーポ＆Dal Segno",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "DC/W01-091",
+          "DC/WC01-091",
+          "DC/W81-P02S",
+          "DC/W128-P09",
+          "DC/W128-P09S"
+        ],
+        [
+          "DC/W01-095",
+          "DC/WC01-095",
+          "DC/W81-P01S"
+        ],
+        [
+          "DC/W128-096",
+          "DC/W128-096S",
+          "DC/W128-096SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "涼宮ハルヒの憂鬱",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "SY/W08-T16",
+          "SY/W08-097"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ペルソナ",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "P3/S01-014",
+          "P3/SC01-014"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "艦隊これくしょん -艦これ-",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "KC/S25-006",
+          "KC/S42-105"
+        ],
+        [
+          "KC/S25-056"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "BanG Dream!",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "BD/W54-021"
+        ]
+      ],
+      "conditional": true
+    },
+    {
+      "title": "BanG Dream!",
+      "kind": "limit",
+      "limit": 1,
+      "options": [
+        [
+          "BD/W47-P28",
+          "BD/W47-P28S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "BanG Dream!",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "BD/W47-082",
+          "BD/W47-082SP"
+        ],
+        [
+          "BD/W54-065",
+          "BD/WE42-P36",
+          "BD/W125-063",
+          "BD/W125-063S"
+        ],
+        [
+          "BD/W125-010",
+          "BD/W125-010S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ひなろじ ～from Luck ＆ Logic～",
+      "kind": "limit",
+      "limit": 1,
+      "options": [
+        [
+          "HLL/WE29-11"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "Fate",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "FS/S34-078",
+          "FS/S34-078S",
+          "FS/S77-079",
+          "FS/S77-079S"
+        ],
+        [
+          "FS/S36-P03"
+        ],
+        [
+          "FS/S64-063",
+          "FS/S64-063S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "デート・ア・ライブ",
+      "kind": "limit",
+      "limit": 2,
+      "options": [
+        [
+          "DAL/W79-053",
+          "DAL/W79-053SEC",
+          "DAL/W131-P04S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ソードアート・オンライン",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "SAO/S100-011",
+          "SAO/S100-011S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ラブライブ！スーパースター!!",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "LSP/W92-062"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ラブライブ！スーパースター!!",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "LSP/W92-038"
+        ],
+        [
+          "LSP/W92-083",
+          "LSP/W92-083S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "アサルトリリィ",
+      "kind": "limit",
+      "limit": 3,
+      "options": [
+        [
+          "ALL/S90-008",
+          "ALL/S90-008SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "五等分の花嫁",
+      "kind": "limit",
+      "limit": 2,
+      "options": [
+        [
+          "5HY/W90-052",
+          "5HY/W90-052SSP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "五等分の花嫁",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "5HY/W90-061",
+          "5HY/W90-061S"
+        ],
+        [
+          "5HY/W101-081",
+          "5HY/W101-081HYR"
+        ],
+        [
+          "5HY/WE43-23",
+          "5HY/WE43-23IGP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ホロライブプロダクション",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "HOL/W104-099",
+          "HOL/W104-099S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ホロライブプロダクション",
+      "kind": "limit",
+      "limit": 2,
+      "options": [
+        [
+          "HOL/W104-113",
+          "HOL/W104-113S",
+          "HOL/W104-113SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ホロライブプロダクション",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "HOL/W91-057",
+          "HOL/W91-057S"
+        ],
+        [
+          "HOL/W91-105",
+          "HOL/W91-105S"
+        ],
+        [
+          "HOL/W104-040",
+          "HOL/W104-040S",
+          "HOL/W104-040SSP"
+        ],
+        [
+          "HOL/W104-069",
+          "HOL/W104-069S",
+          "HOL/W104-069SSP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "D_CIDE TRAUMEREI",
+      "kind": "limit",
+      "limit": 3,
+      "options": [
+        [
+          "DCT/S86-079",
+          "DCT/S86-079SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "D_CIDE TRAUMEREI",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "DCT/S86-002",
+          "DCT/S86-002SP"
+        ],
+        [
+          "DCT/S86-076",
+          "DCT/S86-076SP"
+        ],
+        [
+          "DCT/S86-088"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "オーバーロード",
+      "kind": "limit",
+      "limit": 0,
+      "options": [
+        [
+          "OVL/S99-032",
+          "OVL/S99-032S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "オーバーロード",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "OVL/S62-106",
+          "OVL/SE54-31OLR"
+        ],
+        [
+          "OVL/S99-104"
+        ],
+        [
+          "OVL/SE54-57",
+          "OVL/SE54-57OLR",
+          "OVL/SE54-57EX"
+        ],
+        [
+          "OVL/SE54-61",
+          "OVL/SE54-61OLR",
+          "OVL/SE54-61SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "Key",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "Kka/W102-003",
+          "Kka/W102-003SP"
+        ],
+        [
+          "Kdb/W102-068",
+          "Kdb/W102-068S"
+        ],
+        [
+          "Kai/W102-077",
+          "Kai/W102-077SP"
+        ],
+        [
+          "Ksm/W102-037",
+          "Ksm/W102-037S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "転生したらスライムだった件",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "TSK/S70-065",
+          "TSK/S70-065SP"
+        ],
+        [
+          "TSK/S101-052",
+          "TSK/S101-052S"
+        ],
+        [
+          "TSK/S101-054",
+          "TSK/S101-054S"
+        ],
+        [
+          "TSK/S101-077",
+          "TSK/S101-077SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "チェンソーマン",
+      "kind": "limit",
+      "limit": 2,
+      "options": [
+        [
+          "CSM/S96-029",
+          "CSM/S96-029S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "チェンソーマン",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "CSM/S96-085"
+        ],
+        [
+          "CSM/S96-086",
+          "CSM/S96-086S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "パズル＆ドラゴンズ",
+      "kind": "limit",
+      "limit": 1,
+      "options": [
+        [
+          "PAD/S105-003",
+          "PAD/S105-003SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "青春ブタ野郎シリーズ",
+      "kind": "limit",
+      "limit": 2,
+      "options": [
+        [
+          "SBY/W114-049",
+          "SBY/W114-049ABR",
+          "SBY/W114-049OFR"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "アイドルマスター シャイニーカラーズ",
+      "kind": "limit",
+      "limit": 1,
+      "options": [
+        [
+          "ISC/S110-009",
+          "ISC/S110-009SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "アイドルマスター シャイニーカラーズ",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "ISC/S110-004",
+          "ISC/S110-004OFR",
+          "ISC/S110-004SSP"
+        ],
+        [
+          "ISC/S110-038",
+          "ISC/S110-038SP"
+        ],
+        [
+          "ISC/S110-061",
+          "ISC/S110-061OFR",
+          "ISC/S110-061SSP"
+        ],
+        [
+          "ISC/S110-093",
+          "ISC/S110-093WIR"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "プロジェクトセカイ カラフルステージ！ feat. 初音ミク",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "PJS/S109-001",
+          "PJS/S109-001SSP"
+        ],
+        [
+          "PJS/S109-060",
+          "PJS/S109-060SSP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "アリス・ギア・アイギス",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "AGS/W108-005",
+          "AGS/W108-005SP"
+        ],
+        [
+          "AGS/W108-009",
+          "AGS/W108-009S"
+        ],
+        [
+          "AGS/W108-032",
+          "AGS/W108-032SP"
+        ],
+        [
+          "AGS/W108-034",
+          "AGS/W108-034S"
+        ],
+        [
+          "AGS/W108-038",
+          "AGS/W108-038S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ウマ娘 プリティーダービー",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "UMA/W106-T11",
+          "UMA/W106-T11R"
+        ],
+        [
+          "UMA/W106-035",
+          "UMA/W106-035S"
+        ],
+        [
+          "UMA/W106-131",
+          "UMA/W106-131SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "クレヨンしんちゃん",
+      "kind": "limit",
+      "limit": 1,
+      "options": [
+        [
+          "CS/S114-047",
+          "CS/S114-047S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "Re:ゼロから始める異世界生活",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "RZ/S116-P09S",
+          "RZ/S116-P09EX"
+        ],
+        [
+          "RZ/S116-078",
+          "RZ/S116-078S",
+          "RZ/S116-078SP"
+        ],
+        [
+          "RZ/S116-083",
+          "RZ/S116-083S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "ラブライブ！蓮ノ空女学院スクールアイドルクラブ",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "LHS/W122-002",
+          "LHS/W122-002S",
+          "LHS/W122-002EX"
+        ],
+        [
+          "LHS/W122-009",
+          "LHS/W122-009S",
+          "LHS/W122-009SP"
+        ],
+        [
+          "LHS/W122-012",
+          "LHS/W122-012S"
+        ],
+        [
+          "LHS/W122-050",
+          "LHS/W122-050S"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "学園アイドルマスター",
+      "kind": "limit",
+      "limit": 2,
+      "options": [
+        [
+          "GIM/W124-071a",
+          "GIM/W124-071b",
+          "GIM/W124-071EX",
+          "GIM/W124-071S",
+          "GIM/W124-071SP"
+        ]
+      ],
+      "conditional": false
+    },
+    {
+      "title": "学園アイドルマスター",
+      "kind": "choice",
+      "limit": 0,
+      "options": [
+        [
+          "GIM/W124-045",
+          "GIM/W124-045S"
+        ],
+        [
+          "GIM/W124-007",
+          "GIM/W124-007S",
+          "GIM/W124-007SP",
+          "GIM/W124-P09"
+        ]
+      ],
+      "conditional": false
+    }
+  ],
+  "standardBans": [
+    "DC/W01-E18",
+    "DC/WC01-E18",
+    "DC/WE08-45",
+    "SK/WE05-27",
+    "DS/W46-116",
+    "ZM/W03-057",
+    "MM/W17-067",
+    "BD/W54-013",
+    "KS/W55-034",
+    "GU/W57-087",
+    "GU/W57-P09",
+    "GU/W94-082",
+    "GU/W94-082S",
+    "MR/W59-093",
+    "LSS/W69-091",
+    "LSS/W69-091A",
+    "LNJ/W85-030",
+    "KMD/W96-008",
+    "KMD/W96-008MDR",
+    "KMD/W96-057",
+    "KMD/W96-057MDR",
+    "BD/W95-001",
+    "BD/W95-001SSP",
+    "SG/W89-042",
+    "LS/W05-086",
+    "PT/W07-021",
+    "DS/W46-045",
+    "SHS/W56-076",
+    "KNK/W132-096",
+    "KNK/W132-096S",
+    "VRG/WE52-16",
+    "VRG/WE52-16H",
+    "VRG/WE52-P01S",
+    "VRG/WE52-P01EX",
+    "P3/S01-014",
+    "P3/SC01-014",
+    "MK/S33-035",
+    "FH/SE03-004",
+    "FH/SE03-004S",
+    "FS/S34-004",
+    "FS/S34-004S",
+    "FS/S34-054",
+    "FS/S34-054S",
+    "PY/S38-120",
+    "PY/S38-125",
+    "KI/S44-104",
+    "GZL/SE33-41",
+    "FGO/S87-031",
+    "FGO/S87-031S",
+    "MAR/S89-038",
+    "MAR/S89-038MR",
+    "TSK/S82-024",
+    "PD/SE32-49",
+    "DG/S02-019",
+    "DG/S02-047",
+    "DG/S02-T08",
+    "DG/S02-069",
+    "DG/S02-094",
+    "KF/S05-045",
+    "MG/S39-072",
+    "TSK/S82-095",
+    "OVL/SE54-41",
+    "OVL/SE54-41OLR",
+    "OVL/SE54-P03S",
+    "TAL/S126-085",
+    "TAL/S126-085S",
+    "IAS/SE55-40",
+    "IAS/SE55-40BNP",
+    "IAS/SE55-40SP"
+  ],
+  "notes": [
+    "Current Neo Standard restriction groups and Standard/Side banned-card text lists imported.",
+    "Conditional title exceptions are advisory and are not hard failures."
+  ]
+}
