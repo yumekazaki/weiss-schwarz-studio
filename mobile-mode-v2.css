@@ -13,6 +13,11 @@
   color: #ffdc87;
 }
 
+.mobile-mode #home [data-backdrop=decks] { background-image: url('art/scenes/fate-mobile.jpg'); }
+.mobile-mode #home [data-backdrop=practice] { background-image: url('art/scenes/sao-family-v2-mobile.jpg'); }
+.mobile-mode #home [data-backdrop=host] { background-image: url('art/scenes/konosuba-mobile.jpg'); }
+.mobile-mode #home [data-backdrop=join] { background-image: url('art/scenes/rwby-mobile.jpg'); }
+
 /* Keep a single, unfiltered scene on screen and avoid compositing idle effects. */
 .mobile-mode body #home {
   height: 100svh;
