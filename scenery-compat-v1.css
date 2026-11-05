@@ -1,0 +1,54 @@
+/* Keep the JPEG scenery visible on browsers with limited compositing support. */
+.simple-scenery body #home {
+  height: 100vh;
+  min-height: 100vh;
+}
+
+.simple-scenery #home .menu-backgrounds,
+.simple-scenery #home .menu-overlay,
+.simple-scenery #home .title-scene,
+.simple-scenery #workshop-scenery,
+.simple-scenery .meadow-atmosphere,
+.simple-scenery .workshop-image,
+.simple-scenery .workshop-shade,
+.simple-scenery .meadow-image {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  contain: none;
+}
+
+.simple-scenery #home .menu-backgrounds { z-index: 0; }
+.simple-scenery #home .menu-overlay {
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(5, 21, 30, .9), transparent 65%);
+}
+.simple-scenery #home .title-scene {
+  background-position: 60% center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* Paint each scene directly without an SVG filter or CSS mask. */
+.simple-scenery #home [data-backdrop=decks] { background-image: url('art/scenes/fate.jpg'); }
+.simple-scenery #home [data-backdrop=practice] { background-image: url('art/scenes/sao-family-v2.jpg'); }
+.simple-scenery #home [data-backdrop=host] { background-image: url('art/scenes/konosuba.jpg'); }
+.simple-scenery #home [data-backdrop=join] { background-image: url('art/scenes/rwby.jpg'); }
+
+.simple-scenery #home .title-scene > *,
+.simple-scenery #home #title-motion,
+.simple-scenery .workshop-canopy,
+.simple-scenery .workshop-sunlight,
+.simple-scenery .workshop-petal,
+.simple-scenery .meadow-grass,
+.simple-scenery .meadow-cloud,
+.simple-scenery .meadow-sunlight,
+.simple-scenery .meadow-gust,
+.simple-scenery .online-playmat::before {
+  display: none;
+}
+
+.simple-scenery .online-fullscreen .online-playmat {
+  height: calc(100vh - 47px);
+}
