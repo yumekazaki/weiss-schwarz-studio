@@ -55,6 +55,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  else if(type==='manual-move'){const rr=refs();need(zones.includes(args.to),'Invalid destination.');need(!stage(args.to)||rr.length===1&&(!own[args.to].length||rr[0].z===args.to),'Use an empty stage position.');move(s,rr,p,args.to,args.position==='bottom'?'bottom':'top');if(args.reveal)for(const c of own[args.to].filter(c=>rr.some(x=>x.uid===c.uid)))c.revealed=true;s.onlineEpoch++;}
  else if(type==='manual-orient'){const rr=refs();need(['stand','rest','reverse'].includes(args.orientation),'Invalid orientation.');for(const ref of rr){need(stage(ref.z),'Only stage cards have battle orientation.');checkOwn(ref).orientation=args.orientation;}}
  else if(type==='manual-reveal'){for(const ref of refs()){const c=checkOwn(ref);c.revealed=!!args.reveal;}s.onlineEpoch++;}
+ else if(type==='manual-flip'){for(const ref of refs()){const c=checkOwn(ref);c.faceDown=!c.faceDown;c.revealed=false;}s.onlineEpoch++;}
  else if(type==='manual-draw'){r.drawCards(s,p,num(args.amount));s.onlineEpoch++;}
  else if(type==='manual-shuffle'){secureShuffle(own.deck);s.onlineEpoch++;}
  else if(type==='manual-cost'){need(!s.cost||s.costOwner===p,'This cost belongs to the other player.');s.cost=!!args.paying;s.costOwner=s.cost?p:null;}
