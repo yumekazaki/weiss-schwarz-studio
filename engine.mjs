@@ -1,7 +1,7 @@
 export const zones=['deck','hand','waiting','stock','clock','level','memory','climax','resolution','center-left','center-middle','center-right','back-left','back-right',...['center-left','center-middle','center-right','back-left','back-right'].map(x=>'markers:'+x)];
 export const phases=['Stand','Draw','Clock','Main','Climax','Attack','End'];
 export const stage=z=>/^(center|back)-/.test(z);
-export const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+export const shuffle=a=>{for(let i=a.length-1;i>0;i--){const range=i+1,limit=Math.floor(4294967296/range)*range;let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=limit);const j=n%range;[a[i],a[j]]=[a[j],a[i]];}return a;};
 export function validate(deck,catalog,format='Standard',language='EN'){
  const errors=[],warnings=[],names=new Map(),entries=Object.entries(deck).map(([id,n])=>[catalog.get(id),Number(n)]);let total=0,cx=0;
  for(const [c,n] of entries){if(!c){errors.push('Unknown card in deck');continue;}if(!Number.isInteger(n)||n<1){errors.push('Invalid card count');continue;}total+=n;if(c.type==='Climax')cx+=n;names.set(c.name,(names.get(c.name)||0)+n);if(c.language!==language)errors.push('Mixed language: '+c.code);}
