@@ -2,6 +2,7 @@ import {createMatch,draw,move,shuffle,validate,stage,zones} from './engine.mjs';
 import {createResolver,stageKeys} from './automation.mjs';
 const copy=x=>structuredClone(x);
 const need=(ok,msg)=>{if(!ok)throw Error(msg);};
+const knowledge=s=>JSON.stringify(s.players.map(p=>['deck','hand','stock'].map(z=>p.zones[z].map(c=>[c.uid,c.revealed]))));
 export function secureShuffle(a){for(let i=a.length-1;i>0;i--){const range=i+1,limit=Math.floor(4294967296/range)*range;let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=limit);const j=n%range;[a[i],a[j]]=[a[j],a[i]];}return a;}
 export function choiceOwner(s){const c=s.auto?.choice;if(!c)return null;if(Number.isInteger(c.p))return c.p;if(Number.isInteger(c.task?.p))return c.task.p;
  if(['icon-order','unknown-icon'].includes(c.kind))return s.auto.attack?.p;
@@ -17,19 +18,20 @@ export function initialize(decks,catalog){for(const d of decks){const v=validate
 }
 export function ownedRef(s,p,r){need(r&&r.p===p&&zones.includes(r.z)&&typeof r.uid==='string','You may act only on your own cards.');const c=s.players[p].zones[r.z].find(c=>c.uid===r.uid);need(c,'That card is no longer in the selected zone.');return c;}
 function resolverFor(catalog){return createResolver(catalog);}
-function event(s,p,type,args){s.events??=[];s.events.unshift({id:crypto.randomUUID(),actor:p,type,turn:s.turn,phase:s.phase,refs:copy(args.refs||args.ref&&[args.ref]||[]),choicePlayer:choiceOwner(s)});s.events=s.events.slice(0,100);s.log.unshift('T'+s.turn+' · Player '+(p+1)+' · '+type);s.log=s.log.slice(0,150);}
-export function tick(s,catalog,now=Date.now()){const r=resolverFor(catalog),a=r.auto(s);if(s.setup||s.manualWindow||s.undoRequest||a.paused)return false;if(a.reveal){s.revealUntil??=now+900;if(now<s.revealUntil)return false;r.finishReveal(s,a.reveal.id);delete s.revealUntil;}else if(a.queue.length&&!a.choice)r.run(s);else return false;if(a.reveal)s.revealUntil=now+900;return true;}
+function event(s,p,type,args,previous){const locations=t=>new Map(t.players.flatMap((player,p)=>Object.entries(player.zones).flatMap(([z,cards])=>cards.map(c=>[c.uid,{p,z}]))));const before=previous?locations(previous):new Map(),changes=[];for(const [uid,to] of locations(s)){const from=before.get(uid);if(from&&(from.p!==to.p||from.z!==to.z))changes.push({uid,from,to});}s.events??=[];s.events.unshift({id:crypto.randomUUID(),actor:p,type,turn:s.turn,phase:s.phase,refs:copy(args.refs||args.ref&&[args.ref]||[]),changes,choicePlayer:choiceOwner(s)});s.events=s.events.slice(0,100);s.log.unshift('T'+s.turn+' · Player '+(p+1)+' · '+type);s.log=s.log.slice(0,150);}
+export function tick(s,catalog,now=Date.now()){const r=resolverFor(catalog),a=r.auto(s),before=knowledge(s);if(s.setup||s.manualWindow||s.undoRequest||a.paused)return false;if(a.reveal){s.revealUntil??=now+900;if(now<s.revealUntil)return false;r.finishReveal(s,a.reveal.id);delete s.revealUntil;}else if(a.queue.length&&!a.choice)r.run(s);else return false;if(a.reveal)s.revealUntil=now+900;if(knowledge(s)!==before)s.onlineEpoch=(s.onlineEpoch||0)+1;return true;}
 export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid seat.');const s=copy(original),r=resolverFor(catalog),a=r.auto(s),own=s.players[p].zones;args=args||{};
  const checkOwn=ref=>ownedRef(s,p,ref),refs=()=>{need(Array.isArray(args.refs)&&args.refs.length>0&&args.refs.length<=50,'Select cards.');need(new Set(args.refs.map(x=>x.uid)).size===args.refs.length,'Duplicate selected card.');args.refs.forEach(checkOwn);return args.refs;};
  const num=(n,max=50)=>{need(Number.isInteger(n)&&n>=1&&n<=max,'Invalid amount.');return n;};
- if(type==='concede'){a.gameOver={players:[p],reason:'Player '+(p+1)+' conceded.'};a.choice=null;a.queue=[];a.reveal=null;event(s,p,type,args);return s;}
+ if(type==='concede'){a.gameOver={players:[p],reason:'Player '+(p+1)+' conceded.'};a.choice=null;a.queue=[];a.reveal=null;event(s,p,type,args,original);return s;}
  need(!a.gameOver,'The match has ended.');
  if(s.setup){need(type==='mulligan'&&p===s.setup.p,'Waiting for Player '+(s.setup.p+1)+' to mulligan.');const rr=args.refs?.length?refs():[];need(rr.every(x=>x.z==='hand'),'Mulligan uses hand cards.');const selected=rr.map(x=>checkOwn(x));for(const c of selected)own.hand.splice(own.hand.indexOf(c),1);draw(s,p,selected.length);own.waiting.push(...selected);secureShuffle(own.deck); // rules: returned cards go to waiting, then shuffled back after replacements
- own.deck.push(...own.waiting.splice(0));secureShuffle(own.deck);s.setup.done[p]=true;if(!s.setup.done[1-p])s.setup.p=1-p;else{delete s.setup;r.advance(s);}s.onlineEpoch++;event(s,p,type,args);return s;}
+ own.deck.push(...own.waiting.splice(0));secureShuffle(own.deck);s.setup.done[p]=true;if(!s.setup.done[1-p])s.setup.p=1-p;else{delete s.setup;r.advance(s);}s.onlineEpoch++;event(s,p,type,args,original);return s;}
  need(!s.undoRequest,'An undo request is awaiting agreement.');
+ if(type==='pause'){need(!s.manualWindow,'A manual effect is already open.');s.manualWindow={p,by:p,reason:'Paused for card effects / manual correction',previousPaused:!!a.paused};a.paused=true;event(s,p,type,args,original);return s;}
  const decision=choiceOwner(s),manualChoice=['manual-counter','encore-manual','unknown-icon'].includes(a.choice?.kind),windowOwner=s.manualWindow?.p;
- if(type==='effect-request'){need(!s.manualWindow&&!a.reveal,'Finish the existing effect/check first.');need(decision===null||decision===p,'Waiting for the other player.');need(typeof args.reason==='string'&&args.reason.trim().length>=3&&args.reason.length<=400,'Describe the printed effect and who must act.');need(args.player===0||args.player===1,'Choose the affected player.');s.manualWindow={p:args.player,by:p,reason:args.reason,previousPaused:!!a.paused};a.paused=true;event(s,p,type,{...args,refs:[]});return s;}
- if(type==='effect-done'){need(windowOwner===p,'Only the player resolving this effect can finish it.');need(!s.cost,'Finish paying the cost first.');a.paused=s.manualWindow.previousPaused;delete s.manualWindow;r.afterMutation(s);event(s,p,type,args);return s;}
+ if(type==='effect-request'){need(!s.manualWindow&&!a.reveal,'Finish the existing effect/check first.');need(decision===null||decision===p,'Waiting for the other player.');need(typeof args.reason==='string'&&args.reason.trim().length>=3&&args.reason.length<=400,'Describe the printed effect and who must act.');need(args.player===0||args.player===1,'Choose the affected player.');s.manualWindow={p:args.player,by:p,reason:args.reason,previousPaused:!!a.paused};a.paused=true;event(s,p,type,{...args,refs:[]},original);return s;}
+ if(type==='effect-done'){need(windowOwner===p,'Only the player resolving this effect can finish it.');need(!s.cost,'Finish paying the cost first.');a.paused=s.manualWindow.previousPaused;delete s.manualWindow;r.afterMutation(s);event(s,p,type,args,original);return s;}
  const manual=type.startsWith('manual-');
  if(s.manualWindow)need(manual&&windowOwner===p,'Waiting for the instructed player to resolve the manual effect.');
  else if(manual)need(manualChoice&&decision===p,'Open a manual effect window first. Both players can see who is resolving it.');
@@ -40,7 +42,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  if(type==='respond'){const c=a.choice;need(args.choice===c.id,'That decision has already resolved.');if(c.kind==='encore-offer'&&args.value==='manual')s.onlineManualOwner=p;r.respond(s,args.choice,String(args.value));}
  else if(type==='advance')r.advance(s);
  else if(type==='attack'){checkOwn(args.ref);need(['frontal','side','direct'].includes(args.attackType),'Invalid attack type.');r.beginAttack(s,args.ref,args.attackType);}
- else if(type==='clock'){need(s.phase===2&&!s.clockedTurn,'Clock only once during clock phase.');const c=checkOwn(args.ref);need(args.ref.z==='hand','Choose a hand card.');move(s,[args.ref],p,'clock');s.clockedTurn=s.turn;r.drawCards(s,p,2);s.onlineEpoch++;}
+ else if(type==='clock'){need(s.phase===2&&s.clockedTurn!==s.turn,'Clock only once during clock phase.');const c=checkOwn(args.ref);need(args.ref.z==='hand','Choose a hand card.');move(s,[args.ref],p,'clock');s.clockedTurn=s.turn;r.drawCards(s,p,2);s.onlineEpoch++;}
  else if(type==='play'){need([3,4].includes(s.phase),'Cards are played during main or climax phase.');const c=checkOwn(args.ref),d=catalog.get(c.id);need(args.ref.z==='hand','Play a card from hand.');need(Number(d.level)<=own.level.length,'Card level is too high.');need(!+d.level||[...own.clock,...own.level].some(c=>catalog.get(c.id)?.color===d.color),'Missing matching color in clock/level.');const cost=Number(d.cost)||0;need(cost<=own.stock.length,'Not enough stock.');
  if(d.type==='Climax'){need(s.phase===4&&!own.climax.length,'Play one climax during climax phase.');need([...own.clock,...own.level].some(c=>catalog.get(c.id)?.color===d.color),'Climax requires matching color.');}
  else need(s.phase===3,'Characters and events are played during main phase.');
@@ -58,17 +60,19 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  else if(type==='manual-damage'){need(!a.damage&&!a.reveal,'Finish current damage first.');r.damage(s,p,num(args.amount));}
  else if(type==='manual-modifier'){checkOwn(args.ref);need(stage(args.ref.z),'Choose a character.');need(['soul','power','level'].includes(args.stat)&&Number.isInteger(args.amount)&&Math.abs(args.amount)<=100000,'Invalid modifier.');need(typeof args.label==='string'&&args.label.length<=200,'Label the effect.');r.manualEffect(s,args.ref,{[args.stat]:args.amount},args.label,args.duration==='persistent'?'persistent':'turn');}
  else if(type==='manual-remove-modifier'){need(Number.isInteger(args.index)&&a.effects[args.index]?.p===p,'Only remove your own modifier.');a.effects.splice(args.index,1);}
+ else if(type==='manual-phase'){need(p===s.active&&!a.choice&&!a.attack&&!a.reveal&&!a.queue.length,'Phase correction requires a clear resolution and the active player.');need(Number.isInteger(args.phase)&&args.phase>=0&&args.phase<=6,'Invalid phase.');s.phase=args.phase;}
  else throw Error('Unsupported command.');
  if(a.reveal)s.revealUntil=Date.now()+900;
  if(s.clockedTurn&&s.clockedTurn!==s.turn)delete s.clockedTurn;
  const count=t=>t.players.flatMap(p=>Object.values(p.zones).flat()).map(c=>c.uid).sort().join('|');need(count(s)===count(original),'Card conservation failed.');
- event(s,p,type,args);return s;
+ if(knowledge(s)!==knowledge(original))s.onlineEpoch=Math.max(s.onlineEpoch||0,original.onlineEpoch||0)+1;
+ event(s,p,type,args,original);return s;
 }
 export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog);out.stats={};for(let p=0;p<2;p++)for(const z of stageKeys){const c=s.players[p].zones[z][0];if(c)out.stats[c.uid]=r.stats(s,{p,z,uid:c.uid});}
  for(let p=0;p<2;p++)for(const [z,arr] of Object.entries(out.players[p].zones)){const hideAll=z==='deck'||z==='stock'||z==='hand'&&p!==seat;out.players[p].zones[z]=arr.map((c,i)=>!c.revealed&&(hideAll||c.faceDown&&p!==seat)?{uid:'hidden:'+p+':'+z+':'+i,hidden:true,faceDown:true}:c);}
  const owner=choiceOwner(s),a=out.auto;out.waitingFor=s.setup?.p??s.manualWindow?.p??owner??s.active;
  // Queue/tasks contain deck order, private choice options and card identities. Never send them.
  out.auto={enabled:true,paused:a.paused,choice:owner===seat?a.choice:null,reveal:a.reveal,gameOver:a.gameOver,effects:a.effects,reviews:a.reviews?.filter(x=>!['hand','deck','stock'].includes(x.z)),results:a.results?.map(d=>({p:d.p,n:d.n,canceled:d.canceled,label:d.label})),attack:a.attack?{p:a.attack.p,type:a.attack.type,ref:a.attack.ref,defender:a.attack.defender}:null};
- out.choiceOwner=owner;out.events=out.events?.map(e=>({...e,refs:e.refs.filter(r=>!['deck','hand','stock'].includes(r.z)||r.p===seat)}));delete out.onlineManualOwner;delete out.first;delete out.revealUntil;
+ out.choiceOwner=owner;out.events=out.events?.map(e=>({...e,refs:e.refs.filter(r=>!['deck','hand','stock'].includes(r.z)||r.p===seat),changes:(e.changes||[]).filter(c=>c.from.p===seat&&c.to.p===seat||![c.from.z,c.to.z].some(z=>['deck','hand','stock'].includes(z)))}));delete out.onlineManualOwner;delete out.first;delete out.revealUntil;
  return out;
 }
