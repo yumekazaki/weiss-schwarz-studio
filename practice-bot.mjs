@@ -63,7 +63,7 @@ export function nextPracticeBotAction(match, catalog, resolver) {
     } else if (choice.kind === 'manual-counter') {
       option = choice.options.find(item => item.value === 'cancel');
     }
-    option ??= choice.options.find(item => item.value === 'pass') ?? choice.options[0];
+    option ??= choice.options.find(item => item.value === 'pass') ?? choice.options.find(item => !item.disabled);
     if (option) return action(option.label, () => resolver.respond(match, choice.id, option.value));
     return null;
   }

@@ -3,6 +3,7 @@ import {shuffle,stage} from './engine.mjs';
 export const stageKeys=['center-left','center-middle','center-right','back-left','back-right'];
 export const facing=z=>({'center-left':'center-right','center-middle':'center-middle','center-right':'center-left'}[z]);
 const clean=t=>String(t||'').replace(/&nbsp;/g,' ').replace(/[’]/g,"'").replace(/\s+/g,' ').trim();
+const getCardName=card=>clean(card?.name);
 export function abilityLines(c){return (c?.ability||[]).join('\n').split(/(?=【(?:CONT|AUTO|ACT|永|自|起)】)/).map(clean).filter(t=>t&&t!=='-'&&!/^\(:/.test(t));}
 function modifiers(text){
  const normalized=text.normalize('NFKC').replace(/−/g,'-');
@@ -94,6 +95,10 @@ function simpleTriggeredEffect(body){
   return {type:'ability-salvage',optional:true};
  if((m=body.match(/^Search your deck for up to (?:1|one) (?:《([^》]+)》 )?character, reveal it to your opponent, put it into your hand, and shuffle your deck\.$/i)))
   return {type:'ability-search',trait:m[1]};
+ if((m=body.match(/^Search your deck for up to (?:1|one) card named "([^"]+)", reveal it to your opponent, put it into your hand, and shuffle your deck\.$/i)))
+  return {type:'ability-search',name:m[1]};
+ if((m=body.match(/^Look at (up to )?(\d+|four) cards? from the top of your deck, choose up to (?:1|one) 《([^》]+)》 or 《([^》]+)》 character from among them, reveal it to your opponent, put it into your hand, and put the rest into your waiting room\.$/i)))
+  return {type:'ability-look',count:m[2].toLowerCase()==='four'?4:+m[2],upTo:!!m[1],traits:[m[3],m[4]],reveal:true};
  return null;
 }
 export function activatedAbilities(card){
@@ -102,15 +107,21 @@ export function activatedAbilities(card){
   .map((text,index)=>({index,text,action:parseActivatedAbility(text)}));
 }
 function parseActivatedAbility(text){
- const parts=text.replace(/^\[ACT\]/,'【ACT】').match(/^【ACT】 \[([^\]]+)\] (.+)$/);
+ const parts=text.replace(/^\[ACT\]/,'【ACT】').match(/^【ACT】 (?:(Resonate|Brainstorm) )?\[([^\]]+)\] (.+)$/);
  if(!parts)return null;
- const [,cost,printedBody]=parts;
+ const [,keyword,cost,printedBody]=parts;
  const once=/^This ability activates up to 1 time per turn\. /i;
  const body=printedBody.replace(once,'');
  const stockRest=cost.match(/^(?:\((\d+)\)(?: (【REST】 this card))?|(【REST】 this card))$/);
+ const resonate=cost.match(/^\((\d+)\) Reveal a card named "([^"]+)" in your hand & 【REST】 this card$/);
  const sacrifice=cost==='Put this card into your waiting room';
- if(!stockRest&&!sacrifice)return null;
- const payment={stock:Number(stockRest?.[1]||0),rest:!!(stockRest?.[2]||stockRest?.[3]),sacrifice,once:once.test(printedBody)};
+ if(!stockRest&&!sacrifice&&!resonate)return null;
+ const payment={stock:Number(stockRest?.[1]||resonate?.[1]||0),rest:!!(stockRest?.[2]||stockRest?.[3]||resonate),sacrifice,once:once.test(printedBody),revealName:resonate?.[2]};
+ if(keyword==='Brainstorm'){
+  const brainstorm=body.match(/^Flip over (\d+) cards from the top of your deck, and put them into your waiting room\. For each climax revealed among those cards, (draw up to (?:1|one) card|choose up to (?:1|one) character in your waiting room, and return it to your hand)\.$/i);
+  if(brainstorm)return {...payment,kind:'simple',task:{type:'brainstorm-flip',count:+brainstorm[1],reward:/^draw/i.test(brainstorm[2])?'draw':'salvage',flipped:[]}};
+  return null;
+ }
  const buff=body.match(/^Choose (?:1|one) of your (other )?characters, and that character gets (.+) until end of turn\.$/);
  const modifier=buff&&modifiers(buff[2]);
  if(modifier)return {...payment,kind:'buff',modifier,other:!!buff[1]};
@@ -166,15 +177,15 @@ export function createResolver(card){
     tasks.push({type:parsed.kind,p:source.p,source,label,...parsed});
    }else if(parsed?.kind==='attack-self')tasks=[{type:'entry-self',p:source.p,source,label,...parsed}];
    else{
-    const paid=text.match(/^【AUTO】\s*\[\((\d+)\)( Put 1 card from your hand into your waiting room)?\]/i)
+    const paid=text.match(/^【AUTO】\s*\[\((\d+)\)( Put 1 card from your hand into your waiting room)?( Put the top card of your deck into your clock)?\]/i)
      ||text.match(/^【自】\s*［\((\d+)\)］/);
     const paidBody=trigger.body.match(/^You may pay the cost\. If you do, (.+)$/i)
      ||trigger.body.match(/^あなたはコストを払ってよい。そうしたら、(.+)$/);
     const simple=paid&&paidBody?simpleTriggeredEffect(paidBody[1]):/^【(?:AUTO|自)】\s*(?:\[|［)/.test(text)?null:simpleTriggeredEffect(trigger.body);
     if(simple)tasks=[{...simple,p:source.p,source,label}];
     if(simple&&paid&&paidBody){
-     if(z(s,source.p).stock.length<+paid[1]||paid[2]&&!z(s,source.p).hand.length)continue;
-     tasks=[{type:'ability-pay',stock:+paid[1],discard:!!paid[2],p:source.p,then:tasks[0],optional:true}];
+     if(z(s,source.p).stock.length<+paid[1]||paid[2]&&!z(s,source.p).hand.length||paid[3]&&!z(s,source.p).deck.length)continue;
+     tasks=[{type:'ability-pay',stock:+paid[1],discard:!!paid[2],clockTop:!!paid[3],p:source.p,then:tasks[0],optional:true}];
     }
    }
    const optional=tasks[0]?.optional||!tasks.length&&/^(?:you may|あなたは.*(?:してよい|払ってよい))/i.test(trigger.body);
@@ -272,16 +283,32 @@ export function createResolver(card){
   case 'ability-look-finish':finishAbilityLook(s,t.task);break;
   case 'ability-salvage':{
    const options=z(s,t.p).waiting.filter(c=>get(c.id)?.type==='Character').map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'waiting',uid:c.uid}}));
-   if(options.length)choice(s,'ability-salvage','Waiting Room · Choose a character to return to hand',options,{p:t.p});
+   if(options.length)choice(s,'ability-salvage','Waiting Room · Choose a character to return to hand',[...options,...(t.upTo?[{value:'pass',label:'Choose none'}]:[])],{p:t.p});
+   break;
+  }
+  case 'brainstorm-flip':{
+   const deck=z(s,t.p).deck;
+   if(t.count&&deck.length){
+    const card=take(s,{p:t.p,z:'deck',uid:deck.at(-1).uid},'resolution');
+    prepend(s,{...t,count:t.count-1,flipped:[...t.flipped,{uid:card.uid,climax:get(card.id)?.type==='Climax'}]});
+    flash(s,t.p,card,'ability','Brainstorm · Card '+(t.flipped.length+1));
+   }else{
+    for(const card of t.flipped)take(s,{p:t.p,z:'resolution',uid:card.uid},'waiting');
+    const hits=t.flipped.filter(c=>c.climax).length;
+    log(s,'Brainstorm · '+hits+' climax card(s) revealed.');
+    const reward=t.reward==='draw'?{type:'ability-draw',p:t.p,count:1,upTo:true}:{type:'ability-salvage',p:t.p,upTo:true};
+    prepend(s,...Array.from({length:hits},()=>reward));
+   }
    break;
   }
   case 'ability-pay':{
    const q=z(s,t.p);
-   if(q.stock.length<t.stock||t.discard&&!q.hand.length)break;
+   if(q.stock.length<t.stock||t.discard&&!q.hand.length||t.clockTop&&!q.deck.length)break;
    if(t.discard){
     choice(s,'ability-pay-card','Hand · Choose one card to discard as cost',q.hand.map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'hand',uid:c.uid}})),{p:t.p,task:t});
    }else{
     for(let i=0;i<t.stock;i++)take(s,{p:t.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
+    if(t.clockTop)take(s,{p:t.p,z:'deck',uid:q.deck.at(-1).uid},'clock');
     prepend(s,t.then);
    }
    break;
@@ -290,9 +317,10 @@ export function createResolver(card){
    const q=z(s,t.p);
    const options=q.deck.filter(c=>{
     const card=get(c.id);
+    if(t.name)return getCardName(card)===t.name;
     return card?.type==='Character'&&(!t.trait||(card.attributes||[]).some(trait=>trait.replace(/^《|》$/g,'')===t.trait));
    }).map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id})).sort((a,b)=>a.label.localeCompare(b.label)||a.value.localeCompare(b.value));
-   if(options.length)choice(s,'ability-search','Deck · Choose up to one eligible character',[...options,{value:'pass',label:'Choose none and shuffle'}],{p:t.p,task:t});
+   if(options.length)choice(s,'ability-search','Deck · Choose up to one '+(t.name?'card named '+t.name:'eligible character'),[...options,{value:'pass',label:'Choose none and shuffle'}],{p:t.p,task:t});
    else shuffle(q.deck);
    break;
   }
@@ -362,11 +390,15 @@ export function createResolver(card){
  function lookForAbility(s,t,count){
   if(!count)return finishAbilityLook(s,t);
   const cards=z(s,t.p).deck.slice(-count).reverse();
-  const options=cards.map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id}));
+  const options=cards.map(c=>{
+   const card=get(c.id);
+   const disabled=!!t.traits&&(card?.type!=='Character'||!(card.attributes||[]).some(trait=>t.traits.includes(trait.replace(/^《|》$/g,''))));
+   return {value:c.uid,label:(card?.name||c.id)+(disabled?' · Not eligible':''),card:c.id,disabled};
+  });
   choice(s,'ability-look-target','Top of Deck · Choose up to one card to put into hand',[...options,{value:'pass',label:'Put all looked-at cards in Waiting Room'}],
    {p:t.p,task:t,looked:cards.map(c=>c.uid)});
  }
- function respond(s,id,value,extra={}){if(s.cost)throw Error('Finish the complete cost and end cost-payment suspension before continuing.');const a=auto(s),c=a.choice;if(!c||c.id!==id)throw Error('This choice has already been resolved.');const option=c.options.find(o=>o.value===value);if(!option)throw Error('Choose an available option.');a.choice=null;switch(c.kind){
+ function respond(s,id,value,extra={}){if(s.cost)throw Error('Finish the complete cost and end cost-payment suspension before continuing.');const a=auto(s),c=a.choice;if(!c||c.id!==id)throw Error('This choice has already been resolved.');const option=c.options.find(o=>o.value===value&&!o.disabled);if(!option)throw Error('Choose an available option.');a.choice=null;switch(c.kind){
   case 'act-target':{
    const {action,label}=c.task;
    if(action.kind==='buff')effect(s,option.ref,action.modifier,label);
@@ -387,10 +419,13 @@ export function createResolver(card){
    else prepend(s,...Array.from({length:+value},()=>({type:'draw',p:c.p})));
    break;
   case 'ability-look-target':
-   if(value!=='pass')take(s,{p:c.p,z:'deck',uid:value},'hand');
+   if(value!=='pass'){
+    const picked=take(s,{p:c.p,z:'deck',uid:value},'hand');
+    if(picked&&c.task.reveal)flash(s,c.p,picked,'ability','Card chosen from the top of the deck');
+   }
    prepend(s,...c.looked.filter(uid=>uid!==value).map(uid=>({type:'ability-look-discard',p:c.p,uid})),{type:'ability-look-finish',task:c.task});
    break;
-  case 'ability-salvage':take(s,option.ref,'hand');break;
+  case 'ability-salvage':if(value!=='pass')take(s,option.ref,'hand');break;
   case 'ability-pay-card':{
    const q=z(s,c.p);
    for(let i=0;i<c.task.stock;i++)take(s,{p:c.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
@@ -406,6 +441,7 @@ export function createResolver(card){
    shuffle(z(s,c.p).deck);
    break;
   }
+  case 'ability-resonate':payResonate(s,c.task,option.ref);break;
   case 'rule-order':if(value==='level')levelChoice(s,c.p);else refreshNow(s,c.p);break;
   case 'level':resolveLevel(s,c.p,value);break;
   case 'level-order':{const picked=c.cards.find(x=>x.uid===value);c.cards=c.cards.filter(x=>x!==picked);c.ordered.push(picked);if(c.cards.length){choice(s,'level-order',c.title,c.cards.map(x=>({value:x.uid,label:get(x.id)?.name,card:x.id})),{p:c.p,cards:c.cards,ordered:c.ordered});}else z(s,c.p).waiting.push(...c.ordered);break;}
@@ -465,6 +501,18 @@ export function createResolver(card){
  function drawCards(s,p,n){procedure(s,Array.from({length:n},()=>({type:'draw',p})));}
  function advance(s){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver)throw Error('Finish the current resolution before advancing.');if(s.phase===5)return endAttacks(s);if(s.phase===0){prepend(s,check(s,'Beginning of stand phase'),{type:'stand'});}else if(s.phase===1){prepend(s,{type:'draw-phase'});}else if(s.phase===6){prepend(s,check(s,'Beginning of end phase'),{type:'end-discard'});}else{s.phase++;if(s.phase===5){a.attackPhaseTurn=s.turn;s.step='Attack declaration';}else s.step=['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase];prepend(s,check(s,'Beginning of '+['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase]+' phase'),s.phase===5?check(s,'Beginning of attack declaration step'):null);}run(s);}
  function finishReveal(s,id){const a=auto(s);if(!a.reveal||a.reveal.id!==id)throw Error('This reveal has already finished.');a.reveal=null;run(s);}
+ function payResonate(s,task,reveal){
+  const {ref,action,index,label,text}=task,q=z(s,ref.p);
+  const source=inst(s,ref),card=inst(s,reveal);
+  if(source?.orientation!=='stand'||q.stock.length<action.stock||!card||getCardName(get(card.id))!==action.revealName)throw Error('You cannot pay the full Resonate cost.');
+  for(let i=0;i<action.stock;i++)take(s,{p:ref.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
+  source.orientation='rest';
+  const a=auto(s);
+  if(action.once){a.activatedUses??={};a.activatedUses[ref.uid]??={};a.activatedUses[ref.uid][index]=s.turn;}
+  log(s,'Player '+(ref.p+1)+' activated '+label+' · '+text);
+  flash(s,ref.p,card,'ability','Resonate cost · Reveal '+action.revealName);
+  prepend(s,{...action.task,p:ref.p,label,source:ref},check(s,'After activated ability'));
+ }
  function activate(s,ref,index){
   const a=auto(s),instance=inst(s,ref),card=get(instance?.id);
   if(!a.enabled||a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver||s.cost||s.botOpening!=null)throw Error('Finish the current resolution before activating an ability.');
@@ -474,6 +522,15 @@ export function createResolver(card){
   const action=selected.action,q=z(s,ref.p),label=card.code||card.name;
   if(action.once&&a.activatedUses?.[ref.uid]?.[index]===s.turn)throw Error('This ability has already been activated this turn.');
   if(q.stock.length<action.stock||action.rest&&instance.orientation!=='stand')throw Error('You cannot pay the full cost of this ability.');
+  if(action.revealName){
+   if(action.kind!=='simple')throw Error('This Resonate effect requires manual resolution.');
+   const options=q.hand.filter(c=>getCardName(get(c.id))===action.revealName).map(c=>({value:c.uid,label:get(c.id)?.code||action.revealName,card:c.id,ref:{p:ref.p,z:'hand',uid:c.uid}}));
+   if(!options.length)throw Error('Resonate requires a card named '+action.revealName+' in your hand.');
+   const task={ref,action,index,label,text:selected.text};
+   if(options.length===1)payResonate(s,task,options[0].ref);
+   else choice(s,'ability-resonate','Hand · Choose a '+action.revealName+' to reveal for Resonate',options,{p:ref.p,task});
+   return;
+  }
   if(action.once){a.activatedUses??={};a.activatedUses[ref.uid]??={};a.activatedUses[ref.uid][index]=s.turn;}
   for(let i=0;i<action.stock;i++)take(s,{p:ref.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
   if(action.rest)instance.orientation='rest';
