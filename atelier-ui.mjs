@@ -137,15 +137,16 @@ export function mountAtelier(api){
  function positionMenu(anchor){const rect=anchor===menu&&lastMenuRect?lastMenuRect:anchor.getBoundingClientRect(),width=Math.min(310,window.innerWidth-24);lastMenuRect=rect;Object.assign(menu.style,{width:width+'px',left:Math.max(12,Math.min(rect.left,window.innerWidth-width-12))+'px',top:Math.max(12,Math.min(rect.bottom+8,window.innerHeight-Math.min(menu.scrollHeight,600)-12))+'px',maxHeight:'min(600px, calc(100dvh - 24px))'});}
  function showSimpleMenu(anchor,title,choices){hidePreview();const parent=$('#dialog').open?$('#dialog'):document.body;parent.append(menu);menu.innerHTML='<div class="context-heading"><b>'+esc(title)+'</b><button class="context-close" aria-label="Close action menu">×</button></div><div class="context-options">'+choices.map((c,i)=>'<button data-menu-choice="'+i+'" '+(c.disabled?'disabled':'')+'><span>'+esc(c.label)+'</span>'+(c.hint?'<small>'+esc(c.hint)+'</small>':'')+'</button>').join('')+'</div>';menu.hidden=false;positionMenu(anchor);menu.querySelector('.context-close').onclick=closeMenu;all('#card-action-menu [data-menu-choice]').forEach(b=>b.onclick=()=>{const c=choices[+b.dataset.menuChoice];closeMenu();c.run?.();});menu.querySelector('[data-menu-choice]:not([disabled])')?.focus({preventScroll:true});}
  function moveTo(ref,to,orientation){api.move([ref],ref.p,to,'top',orientation);}
- function stageChoice(ref,rested=false,swap=false){const anchor=menu;showSimpleMenu(anchor,swap?'Move / swap position':'Choose stage position',stagePositions.map(z=>({label:labels[z]+(api.state().match.players[ref.p].zones[z].length?' · occupied':''),run:()=>{if(swap)api.swapStage(ref,z);else api.placeStage(ref,z,rested);}})));}
+ function stageChoice(ref,rested=false,swap=false,play=false){const anchor=menu;showSimpleMenu(anchor,swap?'Move / swap position':'Choose stage position',stagePositions.map(z=>({label:labels[z]+(api.state().match.players[ref.p].zones[z].length?' · occupied':''),run:()=>{if(swap)api.swapStage(ref,z);else if(play)api.playCard(ref,z);else api.placeStage(ref,z,rested);}})));}
  function runContext(key,ref){
-  if(key==='play-stage')return stageChoice(ref);
+  if(key==='play-stage')return stageChoice(ref,false,false,true);
   if(key==='swap-stage')return stageChoice(ref,false,true);
   if(key==='return-stage-rested')return stageChoice(ref,true);
-  if(key==='event'||key==='counter')return moveTo(ref,'resolution');
+  if(key==='event')return api.playCard(ref);
+  if(key==='counter')return moveTo(ref,'resolution');
   if(key==='backup')return showSimpleMenu(menu,'Backup cost · resolve its text manually',[{label:'Discard this card → waiting room',hint:'Pay any printed stock cost separately. No power or effects are applied automatically.',run:()=>moveTo(ref,'waiting')},{label:'Pay stock / other printed costs…',run:revealManual}]);
   if(key==='counter-ability')return revealManual();
-  if(key==='climax')return api.playClimax(ref);
+  if(key==='climax')return api.playCard(ref);
   if(key==='discard')return moveTo(ref,'waiting');
   if(key==='return-hand')return moveTo(ref,'hand');
   if(key==='deck-top'||key==='deck-bottom')return api.move([ref],ref.p,'deck',key==='deck-top'?'top':'bottom');

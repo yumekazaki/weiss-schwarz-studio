@@ -4,7 +4,7 @@ import {activatedAbilities,createResolver,parseAbility} from './automation.mjs';
 import {mountResolution} from './resolution-ui.mjs';
 import {mountAtelier} from './atelier-ui.mjs';
 import {createPresentation,decodeText} from './presentation.mjs';
-import {zones,phases,stage,shuffle,validate,createMatch,draw,move,refresh,levelUp,startDamage,damageReveal,finishDamage,nextPhase} from './engine.mjs';
+import {zones,phases,stage,shuffle,validate,createMatch,draw,move,refresh,levelUp,startDamage,damageReveal,finishDamage,nextPhase,playFromHandError} from './engine.mjs';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
 const persist=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{toast('Browser storage is full or unavailable. Export your decks to keep a copy.');}};
@@ -283,17 +283,34 @@ function advancePhase(){if(match?.practiceBot&&(match.botOpening!=null||match.ac
 function previousPhase(){if(match?.practiceBot&&(match.botOpening!=null||match.active===1))return;commit('Phase correction: previous phase',()=>{if(match.phase>0)match.phase--;else if(match.turn>1){match.turn--;match.active=1-match.active;match.phase=6;}else throw Error('Already at the first phase of the game.');});}
 function instanceAt(r){return match?.players[r.p].zones[r.z]?.find(c=>c.uid===r.uid);}
 const cardAbilities=ref=>activatedAbilities(rulesCard(instanceAt(ref)?.id));
-function playClimax(ref){
- commit('Play climax',()=>{
-  const card=catalog.get(instanceAt(ref)?.id),zones=match.players[ref.p].zones;
+function playPracticeCard(ref,to){
+ const check=()=>{
+  if(match.active!==ref.p||ref.z!=='hand')throw Error('Play a card from hand during your turn.');
   const a=resolver.auto(match);
-  if(match.active!==ref.p||match.phase!==4||ref.z!=='hand'||card?.type!=='Climax')throw Error('Play a climax from hand during your Climax phase.');
-  if(a.choice||a.reveal||a.paused||a.attack||a.queue.length||a.gameOver)throw Error('Finish the current resolution first.');
-  if(zones.climax.length)throw Error('You can play only one climax.');
-  if(![...zones.clock,...zones.level].some(c=>catalog.get(c.id)?.color===card.color))throw Error('Play a climax with a matching color in your clock or level.');
-  move(match,[ref],ref.p,'climax');
+  if(a.choice||a.reveal||a.paused||a.attack||a.queue.length||a.gameOver||match.botOpening!=null)throw Error('Finish the current resolution first.');
+  const card=catalog.get(instanceAt(ref)?.id),zones=match.players[ref.p].zones;
+  const error=playFromHandError(card,zones,match.phase,id=>catalog.get(id));
+  if(error)throw Error(error);
+  if(card.type==='Character'&&!stage(to))throw Error('Choose a stage position.');
+  return {card,zones,cost:card.type==='Climax'?0:Number(card.cost)||0};
+ };
+ let choice;
+ try{choice=check();}catch(error){return toast(error.message);}
+ const play=()=>commit('Play '+displayName(choice.card),()=>{
+  const {card,zones,cost}=check();
+  if(cost)move(match,zones.stock.slice(-cost).reverse().map(c=>({p:ref.p,z:'stock',uid:c.uid})),ref.p,'waiting');
+  if(card.type==='Character'){
+   const replaced=zones[to].map(c=>({p:ref.p,z:to,uid:c.uid}));
+   if(replaced.length)move(match,replaced,ref.p,'waiting');
+   zones.waiting.push(...zones['markers:'+to].splice(0));
+  }
+  move(match,[ref],ref.p,card.type==='Climax'?'climax':card.type==='Event'?'resolution':to)[0].faceDown=false;
   selected=[];
  });
+ if(!choice.cost)return play();
+ pile=null;
+ showDialog('<h2>Pay '+choice.cost+' Stock?</h2><p>Play '+esc(displayName(choice.card))+' and move '+choice.cost+' cards from the top of your Stock to your Waiting Room.</p><button class="primary" id="practice-pay-play">Pay '+choice.cost+' Stock and play</button>');
+ $('#practice-pay-play').onclick=()=>{$('#dialog').close();play();};
 }
 function openAbilities(ref,manual){
  const abilities=cardAbilities(ref),choice=match.auto?.choice;
@@ -317,7 +334,7 @@ function openAbilities(ref,manual){
 }
 function selectCards(refs,player){selected=refs;if(player!==undefined){$('#control-player').value=String(player);$('#dest-player').value=String(player);}renderMatch();if(pile)renderPile();}
 function performMove(refs,p,to,position='top',orientation){commit('Manual movement to '+zoneName(to),()=>{const moved=move(match,refs,p,to,position);if(orientation)moved.forEach(c=>c.orientation=orientation);selected=[];});}
-design=mountAtelier({state:()=>({cards,catalog,match,selected,player:cp(),pile}),view,toast,card:id=>catalog.get(id),name:id=>catalog.has(id)?displayName(catalog.get(id)):'Card unavailable',englishAbility:id=>{const p=presentation?.get(id);return p?.kind==='official'||catalog.get(id)?.language==='EN'?p?.ability?.join(' ')||'':'';},instance:instanceAt,readable:r=>{const c=instanceAt(r);return !!c&&(visible(r.p,r.z,c)||(pile?.peek||pile?.looked?.includes(r.uid))&&pile.p===r.p&&pile.z===r.z&&(!c.faceDown||['deck','stock','hand'].includes(r.z)));},image:id=>img(catalog.get(id)),details:readableDetails,inspect,zoneName,openPile,select:selectCards,setPlayer:p=>{$('#control-player').value=String(p);renderMatch();},setAmount:n=>$('#amount').value=String(n),action:name=>commit('Player '+(cp()+1)+': '+name,()=>actions[name]()),move:performMove,advancePhase,previousPhase,setStep:step=>commit('Attack step: '+step,()=>match.step=step),swapStage:(r,to)=>commit('Stage position swap',()=>{const z=match.players[r.p].zones;[z[r.z],z[to]]=[z[to],z[r.z]];[z['markers:'+r.z],z['markers:'+to]]=[z['markers:'+to],z['markers:'+r.z]];selected=[];}),placeStage:(r,to,rested)=>commit('Place character on '+zoneName(to),()=>{const z=match.players[r.p].zones;const old=z[to].map(c=>({p:r.p,z:to,uid:c.uid}));if(old.length)move(match,old,r.p,'waiting');if(z['markers:'+to].length)z.waiting.push(...z['markers:'+to].splice(0));move(match,[r],r.p,to);if(rested)z[to].at(-1).orientation='rest';selected=[];}),openAbilities,playClimax,declareAttack:(r,type,override=false)=>commit((override?'Manual override: ':'')+type+' attack',()=>{if(!override&&resolver.auto(match).enabled)return resolver.beginAttack(match,r,type);if(resolver.auto(match).choice||resolver.auto(match).attack)throw Error('Finish or abort the pending guided sequence first.');const c=instanceAt(r);if(!c)throw Error('Choose a stage character.');c.orientation='rest';match.attackType=type[0].toUpperCase()+type.slice(1);match.attacksThisTurn=(match.attacksThisTurn||0)+1;match.step='Attack declaration';})});
+design=mountAtelier({state:()=>({cards,catalog,match,selected,player:cp(),pile}),view,toast,card:id=>catalog.get(id),name:id=>catalog.has(id)?displayName(catalog.get(id)):'Card unavailable',englishAbility:id=>{const p=presentation?.get(id);return p?.kind==='official'||catalog.get(id)?.language==='EN'?p?.ability?.join(' ')||'':'';},instance:instanceAt,readable:r=>{const c=instanceAt(r);return !!c&&(visible(r.p,r.z,c)||(pile?.peek||pile?.looked?.includes(r.uid))&&pile.p===r.p&&pile.z===r.z&&(!c.faceDown||['deck','stock','hand'].includes(r.z)));},image:id=>img(catalog.get(id)),details:readableDetails,inspect,zoneName,openPile,select:selectCards,setPlayer:p=>{$('#control-player').value=String(p);renderMatch();},setAmount:n=>$('#amount').value=String(n),action:name=>commit('Player '+(cp()+1)+': '+name,()=>actions[name]()),move:performMove,advancePhase,previousPhase,setStep:step=>commit('Attack step: '+step,()=>match.step=step),swapStage:(r,to)=>commit('Stage position swap',()=>{const z=match.players[r.p].zones;[z[r.z],z[to]]=[z[to],z[r.z]];[z['markers:'+r.z],z['markers:'+to]]=[z['markers:'+to],z['markers:'+r.z]];selected=[];}),placeStage:(r,to,rested)=>commit('Place character on '+zoneName(to),()=>{const z=match.players[r.p].zones;const old=z[to].map(c=>({p:r.p,z:to,uid:c.uid}));if(old.length)move(match,old,r.p,'waiting');if(z['markers:'+to].length)z.waiting.push(...z['markers:'+to].splice(0));move(match,[r],r.p,to);if(rested)z[to].at(-1).orientation='rest';selected=[];}),openAbilities,playCard:playPracticeCard,declareAttack:(r,type,override=false)=>commit((override?'Manual override: ':'')+type+' attack',()=>{if(!override&&resolver.auto(match).enabled)return resolver.beginAttack(match,r,type);if(resolver.auto(match).choice||resolver.auto(match).attack)throw Error('Finish or abort the pending guided sequence first.');const c=instanceAt(r);if(!c)throw Error('Choose a stage character.');c.orientation='rest';match.attackType=type[0].toUpperCase()+type.slice(1);match.attacksThisTurn=(match.attacksThisTurn||0)+1;match.step='Attack declaration';})});
 resolutionUI=mountResolution({state:()=>match,ready:()=>match?.practiceBot?matchCardsReady():catalogReady,resolver,commit,dialog:showDialog,inspect,image:id=>img(catalog.get(id)),name:id=>displayName(catalog.get(id))});
 $('#browse-builder-cards').onclick=()=>{$('#search').focus();$('#search').scrollIntoView?.({block:'center',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
 

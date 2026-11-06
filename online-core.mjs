@@ -1,4 +1,4 @@
-import {createMatch,draw,move,shuffle,validate,stage,zones} from './engine.mjs';
+import {createMatch,draw,move,shuffle,validate,stage,zones,playFromHandError} from './engine.mjs';
 import {createResolver,stageKeys} from './automation.mjs';
 const copy=x=>structuredClone(x);
 const need=(ok,msg)=>{if(!ok)throw Error(msg);};
@@ -84,11 +84,11 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  else if(type==='attack'){checkOwn(args.ref);need(['frontal','side','direct'].includes(args.attackType),'Invalid attack type.');r.beginAttack(s,args.ref,args.attackType);}
  else if(type==='clock'){need(s.phase===2&&s.clockedTurn!==s.turn,'Clock only once during clock phase.');const c=checkOwn(args.ref);need(args.ref.z==='hand','Choose a hand card.');move(s,[args.ref],p,'clock');s.clockedTurn=s.turn;r.drawCards(s,p,2);s.onlineEpoch++;}
  else if(type==='play'){need([3,4].includes(s.phase),'Cards are played during main or climax phase.');const c=checkOwn(args.ref),d=catalog.get(c.id);need(args.ref.z==='hand','Play a card from hand.');
- const hasColor=[...own.clock,...own.level].some(card=>catalog.get(card.id)?.color===d.color);
+ const error=playFromHandError(d,own,s.phase,id=>catalog.get(id));
+ need(!error,error);
  const cost=d.type==='Climax'?0:Number(d.cost)||0;
- if(d.type==='Climax'){need(s.phase===4&&!own.climax.length,'Play one climax during climax phase.');need(hasColor,'Play a climax with a matching color in your clock or level.');}
- else{need(s.phase===3,'Characters and events are played during main phase.');need(Number(d.level)<=own.level.length,'Card level is too high.');need(!+d.level||hasColor,'Missing matching color in clock/level.');need(cost<=own.stock.length,'Not enough stock.');}
  for(let i=0;i<cost;i++)move(s,[{p,z:'stock',uid:own.stock.at(-1).uid}],p,'waiting');
+ c.faceDown=false;
  if(d.type==='Character'){need(stageKeys.includes(args.to),'Select a stage position.');if(own[args.to].length)move(s,own[args.to].map(c=>({p,z:args.to,uid:c.uid})),p,'waiting');own.waiting.push(...own['markers:'+args.to].splice(0));move(s,[args.ref],p,args.to);}
  else if(d.type==='Climax')move(s,[args.ref],p,'climax');else{move(s,[args.ref],p,'resolution');s.manualWindow={p,by:p,reason:'Resolve event '+d.code,previousPaused:false};a.paused=true;}
  r.afterMutation(s,before);}

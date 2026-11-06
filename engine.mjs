@@ -1,6 +1,18 @@
 export const zones=['deck','hand','waiting','stock','clock','level','memory','climax','resolution','center-left','center-middle','center-right','back-left','back-right',...['center-left','center-middle','center-right','back-left','back-right'].map(x=>'markers:'+x)];
 export const phases=['Stand','Draw','Clock','Main','Climax','Attack','End'];
 export const stage=z=>/^(center|back)-/.test(z);
+export function playFromHandError(card,zones,phase,get){
+ if(!card)return 'Card data is unavailable.';
+ const climax=card.type==='Climax';
+ if(climax?phase!==4:phase!==3)return climax?'Play climaxes during your Climax phase.':'Play characters and events during your Main phase.';
+ if(climax&&zones.climax.length)return 'You can play only one climax.';
+ const level=climax?0:Number(card.level);
+ const cost=climax?0:Number(card.cost)||0;
+ if(!Number.isFinite(level)||level>zones.level.length)return 'Card level is too high.';
+ if((climax||level>0)&&![...zones.clock,...zones.level].some(c=>get(c.id)?.color===card.color))return 'You need a matching color in your Clock or Level.';
+ if(zones.stock.length<cost)return 'This card costs '+cost+' Stock. You only have '+zones.stock.length+'.';
+ return null;
+}
 export const shuffle=a=>{for(let i=a.length-1;i>0;i--){const range=i+1,limit=Math.floor(4294967296/range)*range;let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=limit);const j=n%range;[a[i],a[j]]=[a[j],a[i]];}return a;};
 export function validate(deck,catalog,format='Standard',language='EN'){
  const errors=[],warnings=[],names=new Map(),entries=Object.entries(deck).map(([id,n])=>[catalog.get(id),Number(n)]);let total=0,cx=0;

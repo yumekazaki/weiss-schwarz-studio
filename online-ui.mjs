@@ -1,5 +1,5 @@
 import {onlineConfig as config} from './online-config.mjs';
-import {phases,zones} from './engine.mjs';
+import {phases,zones,playFromHandError} from './engine.mjs';
 import {cardMoveOptions,facingPosition} from './context-actions.mjs';
 import {activatedAbilities,parseAbility} from './automation.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -187,14 +187,8 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    const manualAllowed=!s.undoRequest&&!s.auto.reveal&&(s.manualWindow?.p===p||s.choiceOwner===p&&['manual-counter','encore-manual','unknown-icon'].includes(s.auto.choice?.kind)||!s.manualWindow&&!s.auto.attack&&!s.auto.choice&&!s.auto.paused&&s.choiceOwner==null);
    if(ref.z==='hand'&&current){
     if(s.phase===2&&s.clockedTurn!==s.turn)actions.push(['Clock this card and draw two',()=>act('clock',{ref})]);
-    const ownZones=s.players[p].zones;
-    const level=Number(info?.level)||0,cost=Number(info?.cost)||0;
-    const climax=info?.type==='Climax';
-    const color=(!climax&&!level)||[...ownZones.clock,...ownZones.level].some(card=>api.card(card.id)?.color===info?.color);
-    if(climax&&s.phase===4){
-     actions.push(['Play climax',()=>act('play',{ref})]);
-    }else if(info&&!climax&&s.phase===3&&level<=ownZones.level.length&&cost<=ownZones.stock.length&&color){
-     actions.push(['Play '+info.type.toLowerCase(),()=>info.type==='Character'?chooseStage(to=>act('play',{ref,to})):act('play',{ref})]);
+    if(info&&(info.type==='Climax'?s.phase===4:s.phase===3)){
+     actions.push(['Play '+info.type.toLowerCase(),()=>playOnlineCard(ref,info)]);
     }
    }
    if(isStage){
@@ -226,6 +220,18 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    }
   }
   showCardActions(anchor,api.name(c.id)+' · '+api.zoneName(ref.z),actions,more);
+ }
+ function playOnlineCard(ref,card){
+  const s=room.state;
+  const error=playFromHandError(card,s.players[ref.p].zones,s.phase,api.card);
+  if(error)return api.toast(error);
+  const pay=to=>{
+   const cost=card.type==='Climax'?0:Number(card.cost)||0;
+   if(!cost)return act('play',{ref,to});
+   show('<h2>Pay '+cost+' Stock?</h2><p>Play '+esc(api.name(card.id))+' and move '+cost+' cards from the top of your Stock to your Waiting Room.</p><button class="primary" id="online-pay-play">Pay '+cost+' Stock and play</button>');
+   $('#online-pay-play').onclick=()=>{$('#dialog').close();act('play',{ref,to});};
+  };
+  return card.type==='Character'?chooseStage(pay):pay();
  }
  function openAbilities(ref,card,abilities,current){
   if(!abilities.length){
