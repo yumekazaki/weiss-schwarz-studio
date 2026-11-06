@@ -94,3 +94,18 @@
   padding: 2px 4px;
   border-radius: 3px;
 }
+.live-power { color: #fff3cc; font-size: 1.15em; font-variant-numeric: tabular-nums; }
+.ability-prompt-text {
+  padding: 10px 12px;
+  border-left: 3px solid #eac68b;
+  background: #243b51;
+  color: #fff5e6;
+  line-height: 1.5;
+}
+.resolution-choices [data-response] img {
+  display: block;
+  height: 95px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0 auto 4px;
+}

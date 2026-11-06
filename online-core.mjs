@@ -2,7 +2,7 @@ import {createMatch,draw,move,shuffle,validate,stage,zones,playFromHandError} fr
 import {createResolver,stageKeys} from './automation.mjs';
 const copy=x=>structuredClone(x);
 const need=(ok,msg)=>{if(!ok)throw Error(msg);};
-const knowledge=s=>JSON.stringify(s.players.map(p=>['deck','hand','stock'].map(z=>p.zones[z].map(c=>[c.uid,c.revealed]))));
+const knowledge=s=>JSON.stringify([s.players.map(p=>['deck','hand','stock'].map(z=>p.zones[z].map(c=>[c.uid,c.revealed]))),s.auto?.choice?.looked,s.auto?.choice?.kind==='ability-search'?s.auto.choice.options.map(o=>o.value):null]);
 function randomBelow(range){const limit=Math.floor(4294967296/range)*range;let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=limit);return n%range;}
 export function secureShuffle(a){for(let i=a.length-1;i>0;i--){const j=randomBelow(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 export function choiceOwner(s){const c=s.auto?.choice;if(!c)return null;if(Number.isInteger(c.p))return c.p;if(Number.isInteger(c.task?.p))return c.task.p;
@@ -58,7 +58,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  }
  need(!s.undoRequest,'An undo request is awaiting agreement.');
  if(type==='pause'){need(!s.manualWindow,'A manual effect is already open.');s.manualWindow={p,by:p,reason:'Paused for card effects / manual correction',previousPaused:!!a.paused};a.paused=true;event(s,p,type,args,original);return s;}
- const decision=choiceOwner(s),manualChoice=['manual-counter','encore-manual','unknown-icon'].includes(a.choice?.kind),windowOwner=s.manualWindow?.p;
+ const decision=choiceOwner(s),manualChoice=['manual-counter','encore-manual','unknown-icon','auto-manual'].includes(a.choice?.kind),windowOwner=s.manualWindow?.p;
  if(type==='card-effect'){
   need(['manual-move','manual-orient','manual-reveal','manual-flip'].includes(args.action),'Invalid card action.');
   checkOwn(args.ref);
@@ -105,6 +105,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  else if(type==='manual-remove-modifier'){need(Number.isInteger(args.index)&&a.effects[args.index]?.p===p,'Only remove your own modifier.');a.effects.splice(args.index,1);}
  else if(type==='manual-phase'){need(p===s.active&&!a.choice&&!a.attack&&!a.reveal&&!a.queue.length,'Phase correction requires a clear resolution and the active player.');need(Number.isInteger(args.phase)&&args.phase>=0&&args.phase<=6,'Invalid phase.');s.phase=args.phase;}
  else throw Error('Unsupported command.');
+ if(type==='manual-move'||type==='manual-orient')r.afterMutation(s,before);
  if(manual&&!s.cost)r.ruleInterrupts(s);
  if(a.reveal)s.revealUntil=Date.now()+900;
  if(s.clockedTurn&&s.clockedTurn!==s.turn)delete s.clockedTurn;
@@ -112,7 +113,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  if(knowledge(s)!==knowledge(original))s.onlineEpoch=Math.max(s.onlineEpoch||0,original.onlineEpoch||0)+1;
  event(s,p,type,args,original);return s;
 }
-export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog);out.stats={};for(let p=0;p<2;p++)for(const z of stageKeys){const c=s.players[p].zones[z][0];if(c)out.stats[c.uid]=r.stats(s,{p,z,uid:c.uid});}
+export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog);out.stats={};for(let p=0;p<2;p++)for(const z of stageKeys){const c=s.players[p].zones[z][0];if(c&&(!c.faceDown||p===seat||c.revealed))out.stats[c.uid]=r.stats(s,{p,z,uid:c.uid});}
  for(let p=0;p<2;p++)for(const [z,arr] of Object.entries(out.players[p].zones)){const hideAll=z==='deck'||z==='stock'||z==='hand'&&p!==seat;out.players[p].zones[z]=arr.map((c,i)=>!c.revealed&&(hideAll||c.faceDown&&p!==seat)?{uid:'hidden:'+p+':'+z+':'+i,hidden:true,faceDown:true}:c);}
  const owner=choiceOwner(s),a=out.auto;out.waitingFor=s.setup?.p??owner??s.manualWindow?.p??s.active;
  // Queue/tasks contain deck order, private choice options and card identities. Never send them.

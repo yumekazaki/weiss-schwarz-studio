@@ -58,6 +58,44 @@ export function parseAbility(text){
  return null;
 }
 export function triggerIcons(c){return (c?.trigger||[]).map(x=>({BOUNCE:'RETURN',STOCK:'POOL',SALVAGE:'COMEBACK'}[x]||x));}
+function automaticTiming(text){
+ const backup=text.match(/^【AUTO】 When you use this card's (?:["']?Backup["']?),\s*(.+)$/i)
+  ||text.match(/^【自】 あなたがこのカードの『助太刀』を使った時、(.+)$/);
+ if(backup)return {kind:'backup',body:backup[1]};
+ const battleOpponent=text.match(/^【AUTO】\s*(?:\[[^\]]+\]\s*)?When this card's battle opponent becomes (?:【REVERSE】|reversed),\s*(.+)$/i);
+ if(battleOpponent)return {kind:'opponent-reverse',body:battleOpponent[1]};
+ const en=text.match(/^【AUTO】\s*(?:\[[^\]]+\]\s*)?(When this card (?:attacks|becomes (?:【REVERSE】|reversed)|is (?:placed (?:on|in) (?:your climax area|the stage|stage) from (?:your )?hand|put into (?:your|the) waiting room from (?:the )?stage))),\s*(.+)$/i);
+ if(en){
+  const timing=en[1].toLowerCase();
+  const kind=timing.includes('attacks')?'attack':timing.includes('becomes')?'reverse':timing.includes('waiting room')?'waiting':timing.includes('climax area')?'climax':'stage';
+  return {kind,body:en[2]};
+ }
+ const jp=text.match(/^【自】\s*(?:［[^］]+］\s*)?このカードが(手札から(?:クライマックス置場|CX置場|舞台)に置かれた|アタックした|リバースした|舞台から控え室に置かれた)時、(.+)$/);
+ if(jp){
+  const timing=jp[1];
+  return {kind:timing.includes('手札')?(timing.includes('舞台')?'stage':'climax'):timing.includes('アタック')?'attack':timing.includes('リバース')?'reverse':'waiting',body:jp[2]};
+ }
+ return null;
+}
+function simpleTriggeredEffect(body){
+ body=body.replace(/\.["”]\s*$/,'.');
+ let m;
+ if((m=body.match(/^(You may draw|Draw) (up to )?(a|\d+) cards?\.$/i)))
+  return {type:'ability-draw',count:m[3].toLowerCase()==='a'?1:+m[3],optional:!!m[2]||/^you may/i.test(m[1]),upTo:!!m[2]};
+ if((m=body.match(/^(You may put|Put) the top (?:(\d+) cards?|card) of your deck into your waiting room\.$/i)))
+  return {type:'ability-mill',count:+(m[2]||1),optional:/^you may/i.test(m[1])};
+ if((m=body.match(/^あなたは(\d+)枚(引く|引いてよい)。$/)))return {type:'ability-draw',count:+m[1],optional:m[2]==='引いてよい'};
+ if((m=body.match(/^あなたは自分の山札の上から(\d+)枚を、控え室に置く。$/)))return {type:'ability-mill',count:+m[1]};
+ if((m=body.match(/^Look at (up to )?(\d+) cards? from the top of your deck, choose up to (?:1|one) card from among them, put it into your hand, (?:and )?put the rest into your waiting room(?:, and this card gets (.+) until end of turn)?\.$/i))){
+  const boost=m[3]?modifiers(m[3]):null;
+  if(!m[3]||boost)return {type:'ability-look',count:+m[2],upTo:!!m[1],boost};
+ }
+ if(/^You may choose (?:1|one) character in your waiting room, and return it to your hand\.$/i.test(body))
+  return {type:'ability-salvage',optional:true};
+ if((m=body.match(/^Search your deck for up to (?:1|one) (?:《([^》]+)》 )?character, reveal it to your opponent, put it into your hand, and shuffle your deck\.$/i)))
+  return {type:'ability-search',trait:m[1]};
+ return null;
+}
 export function activatedAbilities(card){
  return (card?.ability||[]).join('\n').split(/(?=【(?:CONT|AUTO|ACT|永|自|起)】|\[ACT\])/)
   .map(clean).filter(text=>/^(?:【ACT】|【起】|\[ACT\])/.test(text))
@@ -66,11 +104,13 @@ export function activatedAbilities(card){
 function parseActivatedAbility(text){
  const parts=text.replace(/^\[ACT\]/,'【ACT】').match(/^【ACT】 \[([^\]]+)\] (.+)$/);
  if(!parts)return null;
- const [,cost,body]=parts;
+ const [,cost,printedBody]=parts;
+ const once=/^This ability activates up to 1 time per turn\. /i;
+ const body=printedBody.replace(once,'');
  const stockRest=cost.match(/^(?:\((\d+)\)(?: (【REST】 this card))?|(【REST】 this card))$/);
  const sacrifice=cost==='Put this card into your waiting room';
  if(!stockRest&&!sacrifice)return null;
- const payment={stock:Number(stockRest?.[1]||0),rest:!!(stockRest?.[2]||stockRest?.[3]),sacrifice};
+ const payment={stock:Number(stockRest?.[1]||0),rest:!!(stockRest?.[2]||stockRest?.[3]),sacrifice,once:once.test(printedBody)};
  const buff=body.match(/^Choose (?:1|one) of your (other )?characters, and that character gets (.+) until end of turn\.$/);
  const modifier=buff&&modifiers(buff[2]);
  if(modifier)return {...payment,kind:'buff',modifier,other:!!buff[1]};
@@ -78,6 +118,9 @@ function parseActivatedAbility(text){
  if(/^Draw (?:1|a) card, choose (?:1|one) card in your hand, and put it into your waiting room\.$/.test(body))return {...payment,kind:'draw-discard'};
  if(/^Draw (?:1|a) card\.$/.test(body))return {...payment,kind:'draw'};
  if(/^Choose (?:1|one) of your opponent's characters, and return it to their hand\.$/.test(body))return {...payment,kind:'bounce'};
+ if(/^Choose (?:1|one) of your characters, and 【STAND】 it\.$/.test(body))return {...payment,kind:'stand'};
+ const simple=simpleTriggeredEffect(body);
+ if(simple&&['ability-look','ability-mill'].includes(simple.type)&&!simple.optional)return {...payment,kind:'simple',task:simple};
  return null;
 }
 export function createResolver(card){
@@ -86,7 +129,7 @@ export function createResolver(card){
  const log=(s,t)=>{s.log.unshift('T'+s.turn+' · '+t);s.log=s.log.slice(0,150);};
  const allStage=(s,p)=>stageKeys.flatMap(k=>z(s,p)[k].map(c=>({p,z:k,uid:c.uid})));
  const inst=(s,r)=>r&&z(s,r.p)[r.z]?.find(c=>c.uid===r.uid);
- function take(s,r,to,p=r.p){const src=z(s,r.p)[r.z],i=src.findIndex(c=>c.uid===r.uid);if(i<0)return null;const [c]=src.splice(i,1);if(stage(r.z)&&!stage(to)){c.orientation='stand';z(s,r.p).waiting.push(...z(s,r.p)['markers:'+r.z].splice(0));auto(s).effects=auto(s).effects.filter(e=>e.uid!==c.uid);}c.revealed=false;c.faceDown=to==='stock';z(s,p)[to].push(c);return c;}
+ function take(s,r,to,p=r.p){const src=z(s,r.p)[r.z],i=src.findIndex(c=>c.uid===r.uid);if(i<0)return null;const [c]=src.splice(i,1);if(stage(r.z)&&!stage(to)){if(auto(s).activatedUses)delete auto(s).activatedUses[c.uid];if(to==='waiting')queueTriggered(s,r,c,'waiting');c.orientation='stand';z(s,r.p).waiting.push(...z(s,r.p)['markers:'+r.z].splice(0));auto(s).effects=auto(s).effects.filter(e=>e.uid!==c.uid);}c.revealed=false;c.faceDown=to==='stock';z(s,p)[to].push(c);return c;}
  function effect(s,r,vals,label,duration='turn'){const c=inst(s,r);if(!c)throw Error('Choose a character still on stage.');if(['soul','power','level'].some(k=>vals[k]!==undefined&&!Number.isFinite(vals[k])))throw Error('Modifiers must be finite numbers.');auto(s).effects.push({uid:c.uid,p:r.p,...vals,label,turn:s.turn,expires:duration});}
  function stats(s,r){const c=inst(s,r),info=get(c?.id),out={soul:Number(info?.soul)||0,power:Number(info?.power)||0,level:Number(info?.level)||0,breakdown:[],unsupported:[]};if(!c)return {...out,soul:0,power:0};out.breakdown.push({label:'Printed',soul:out.soul,power:out.power});
   for(const source of [r.p,1-r.p].flatMap(p=>[...allStage(s,p),...z(s,p).climax.map(c=>({p,z:'climax',uid:c.uid}))])){
@@ -106,6 +149,51 @@ export function createResolver(card){
  }
  function choice(s,kind,title,options,extra={}){auto(s).choice={id:++auto(s).serial,kind,title,options,...extra};}
  function prepend(s,...tasks){auto(s).queue.unshift(...tasks.filter(Boolean));}
+ function queueTriggered(s,source,instance,timing){
+  if(!instance||instance.faceDown)return;
+  const a=auto(s),key=instance.uid+':'+timing;
+  a.triggerMarks??={};
+  a.triggerMarks[key]=(a.triggerMarks[key]||0)+1;
+  const card=get(instance.id),label=card?.code||card?.name||'Card ability';
+  for(const text of abilityLines(card)){
+   const trigger=automaticTiming(text);
+   if(trigger?.kind!==timing)continue;
+   const parsed=parseAbility(text);
+   let tasks=[];
+   if(parsed?.kind.startsWith('entry-')){
+    if(parsed.draw)tasks.push({type:'draw',p:source.p});
+    if(parsed.stockTop)tasks.push({type:'optional-move',p:source.p,to:'stock'});
+    tasks.push({type:parsed.kind,p:source.p,source,label,...parsed});
+   }else if(parsed?.kind==='attack-self')tasks=[{type:'entry-self',p:source.p,source,label,...parsed}];
+   else{
+    const paid=text.match(/^【AUTO】\s*\[\((\d+)\)( Put 1 card from your hand into your waiting room)?\]/i)
+     ||text.match(/^【自】\s*［\((\d+)\)］/);
+    const paidBody=trigger.body.match(/^You may pay the cost\. If you do, (.+)$/i)
+     ||trigger.body.match(/^あなたはコストを払ってよい。そうしたら、(.+)$/);
+    const simple=paid&&paidBody?simpleTriggeredEffect(paidBody[1]):/^【(?:AUTO|自)】\s*(?:\[|［)/.test(text)?null:simpleTriggeredEffect(trigger.body);
+    if(simple)tasks=[{...simple,p:source.p,source,label}];
+    if(simple&&paid&&paidBody){
+     if(z(s,source.p).stock.length<+paid[1]||paid[2]&&!z(s,source.p).hand.length)continue;
+     tasks=[{type:'ability-pay',stock:+paid[1],discard:!!paid[2],p:source.p,then:tasks[0],optional:true}];
+    }
+   }
+   const optional=tasks[0]?.optional||!tasks.length&&/^(?:you may|あなたは.*(?:してよい|払ってよい))/i.test(trigger.body);
+   (a.triggered??=[]).push({type:'ability-offer',p:source.p,label,text,optional,tasks});
+  }
+ }
+ function flushTriggered(s){
+  const a=auto(s);
+  if(!a.triggered?.length)return false;
+  const p=a.triggered.some(t=>t.p===s.active)?s.active:1-s.active;
+  const tasks=a.triggered.filter(t=>t.p===p);
+  if(tasks.length>1){
+   choice(s,'trigger-order','Choose which triggered ability to resolve first',tasks.map((t,i)=>({value:String(i),label:t.label+' · '+t.text})),{p});
+  }else{
+   a.triggered.splice(a.triggered.indexOf(tasks[0]),1);
+   prepend(s,tasks[0],{type:'trigger-continue'});
+  }
+  return true;
+ }
  function check(s,title){return {type:'check',title};}
  function endGame(s,players,reason){auto(s).gameOver={players,reason};auto(s).choice=null;auto(s).reveal=null;auto(s).queue=[];log(s,'Game ended: '+reason+' · Player '+players.map(p=>p+1).join(' & ')+' loses.');}
  // Interrupt rule actions have priority over every task, except while paying a cost.
@@ -137,15 +225,77 @@ export function createResolver(card){
    if(data?.type==='Event'&&/【COUNTER】/.test(text)&&Number(data.level)<=level&&Number(data.cost)<=q.stock.length&&(Number(data.level)===0||[...q.level,...q.clock].some(c=>get(c.id)?.color===data.color)))return [{value:c.uid,label:data.name+' · counter event (effect and additional conditions manual)',card:c.id,manual:true}];return [];});}
  function checkpoint(s,title,p){const texts=[...allStage(s,p),...z(s,p).climax.map(c=>({p,z:'climax',uid:c.uid})),...z(s,p).clock.slice(-1).map(c=>({p,z:'clock',uid:c.uid}))].flatMap(r=>abilityLines(get(inst(s,r).id)).filter(t=>!parseAbility(t)).map(text=>({p,code:get(inst(s,r).id)?.code,text})));for(const t of texts){const a=auto(s);if(!a.reviews.some(x=>x.code===t.code&&x.text===t.text))a.reviews.push(t);}auto(s).reviews=auto(s).reviews.slice(-50);}
  function flash(s,p,c,kind,label){auto(s).reveal={id:++auto(s).serial,p,card:c.id,uid:c.uid,kind,label};}
- function compareBattle(s){const a=auto(s),atk=inst(s,a.attack.ref),def=inst(s,a.attack.defender);if(atk&&def){const ap=stats(s,a.attack.ref).power,dp=stats(s,a.attack.defender).power;if(ap<=dp)atk.orientation='reverse';if(dp<=ap)def.orientation='reverse';log(s,'Battle '+ap+' versus '+dp+'; lower power reversed (both on tie). Recorded modifiers included; unsupported effects remain manual.');}else log(s,'Battle skipped: an original participant is absent.');prepend(s,{type:'attack-end'});}
+ function reverseCharacter(s,ref){
+  const card=inst(s,ref);
+  if(!card||card.orientation==='reverse')return;
+  card.orientation='reverse';
+  queueTriggered(s,ref,card,'reverse');
+  const attack=auto(s).attack;
+  const other=attack?.ref.uid===ref.uid?attack.defender:attack?.defender?.uid===ref.uid?attack.ref:null;
+  if(other)queueTriggered(s,other,inst(s,other),'opponent-reverse');
+ }
+ function compareBattle(s){const a=auto(s),atk=inst(s,a.attack.ref),def=inst(s,a.attack.defender);if(atk&&def){const ap=stats(s,a.attack.ref).power,dp=stats(s,a.attack.defender).power;if(ap<=dp)reverseCharacter(s,a.attack.ref);if(dp<=ap)reverseCharacter(s,a.attack.defender);log(s,'Battle '+ap+' versus '+dp+'; lower power reversed (both on tie). Recorded modifiers included; unsupported effects remain manual.');}else log(s,'Battle skipped: an original participant is absent.');prepend(s,{type:'attack-end'});}
  function nextTurn(s){const a=auto(s);s.turn++;s.active=1-s.active;s.phase=0;s.attacksThisTurn=0;s.attackType=null;prepend(s,check(s,'Beginning of stand phase'),{type:'stand'});}
  function migrateChoice(s){const a=auto(s),c=a.choice;if(!c)return;if(c.kind==='checkpoint'){checkpoint(s,c.title,c.p);a.choice=null;}else if(c.kind==='damage-view'){a.choice=null;const d=a.damage,last=d&&z(s,d.p).resolution.find(x=>x.uid===d.uids.at(-1));if(!['damage-finish','damage-reveal'].includes(a.queue[0]?.type))prepend(s,{type:d?.canceled||!d?.remaining?'damage-finish':'damage-reveal'});if(last)flash(s,d.p,last,'damage',c.title);}else if(c.kind==='battle'){a.choice=null;prepend(s,{type:'battle'});}else if(c.kind==='turn-ready'){a.choice=null;nextTurn(s);}else if(c.kind==='level-order'){a.choice=null;z(s,c.p).waiting.push(...c.ordered,...c.cards);}else if(c.kind==='counter'&&!counters(s).length){a.choice=null;prepend(s,check(s,'After counter step'),{type:'damage-start'});}}
 
  function startDamageTask(s,p,n,source,label){if(n<=0){log(s,'No damage: soul is zero or less.');return;}auto(s).damage={p,n,remaining:n,uids:[],canceled:false,source,label};prepend(s,{type:'damage-reveal'});}
- function run(s){const a=auto(s);if(a.gameOver||a.paused)return;migrateChoice(s);if(a.choice){if(['level','level-order','rule-order'].includes(a.choice.kind))return;const pending=a.choice;a.choice=null;if(interrupts(s)){if(!a.gameOver)prepend(s,{type:'resume-choice',choice:pending});if(a.choice||a.gameOver)return;}else{a.choice=pending;return;}}let guard=0;while(!a.choice&&!a.gameOver&&guard++<200){if(interrupts(s)) {if(a.choice||a.gameOver)return;continue;}if(a.reveal)return;const t=a.queue.shift();if(!t){if(s.phase===5&&!a.attack)s.step='Attack declaration';if(!s.cost)loseCheck(s);return;}switch(t.type){
+ function run(s){const a=auto(s);if(a.gameOver||a.paused)return;migrateChoice(s);if(a.choice){if(['level','level-order','rule-order'].includes(a.choice.kind))return;const pending=a.choice;a.choice=null;if(interrupts(s)){if(!a.gameOver)prepend(s,{type:'resume-choice',choice:pending});if(a.choice||a.gameOver)return;}else{a.choice=pending;return;}}let guard=0;while(!a.choice&&!a.gameOver&&guard++<200){if(interrupts(s)) {if(a.choice||a.gameOver)return;continue;}if(a.reveal)return;const t=a.queue.shift();if(!t){if(flushTriggered(s))continue;if(s.phase===5&&!a.attack)s.step='Attack declaration';if(!s.cost)loseCheck(s);return;}switch(t.type){
   case 'resume-choice':if(t.choice.kind==='counter')prepend(s,{type:'counter'});else a.choice=t.choice;break;
-  case 'check':if(!loseCheck(s))prepend(s,{type:'checkpoint',title:t.title,p:s.active},{type:'checkpoint',title:t.title,p:1-s.active});break;
+  case 'check':if(!loseCheck(s)){prepend(s,{type:'checkpoint',title:t.title,p:s.active},{type:'checkpoint',title:t.title,p:1-s.active});flushTriggered(s);}break;
+  case 'trigger-continue':flushTriggered(s);break;
   case 'checkpoint':checkpoint(s,t.title,t.p);break;
+  case 'ability-offer':{
+   const supported=t.tasks.length>0;
+   choice(s,supported?'ability-offer':'auto-manual',t.label+(supported?' · Triggered ability':' · Check this ability manually'),
+    [{value:'resolve',label:supported?(t.optional?'Yes · Resolve':'Resolve required ability'):'Continue after checking / resolving manually'},
+     ...(t.optional?[{value:'pass',label:'No · Decline'}]:[])],
+    {p:t.p,task:t,abilityText:t.text});
+   break;
+  }
+  case 'ability-draw':
+   if(t.upTo)choice(s,'ability-count','How many cards do you want to draw?',Array.from({length:t.count+1},(_,i)=>({value:String(i),label:String(i)})),{p:t.p,task:t});
+   else prepend(s,...Array.from({length:t.count},()=>({type:'draw',p:t.p})));
+   break;
+  case 'ability-mill':
+   if(t.count&&z(s,t.p).deck.length){
+    take(s,{p:t.p,z:'deck',uid:z(s,t.p).deck.at(-1).uid},'waiting');
+    if(t.count>1)prepend(s,{...t,count:t.count-1});
+   }
+   break;
+  case 'ability-look':{
+   const max=Math.min(t.count,z(s,t.p).deck.length);
+   if(t.upTo&&max)choice(s,'ability-count','How many top cards do you want to look at?',Array.from({length:max+1},(_,i)=>({value:String(i),label:String(i)})),{p:t.p,task:t});
+   else lookForAbility(s,t,max);
+   break;
+  }
+  case 'ability-look-discard':take(s,{p:t.p,z:'deck',uid:t.uid},'waiting');break;
+  case 'ability-look-finish':finishAbilityLook(s,t.task);break;
+  case 'ability-salvage':{
+   const options=z(s,t.p).waiting.filter(c=>get(c.id)?.type==='Character').map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'waiting',uid:c.uid}}));
+   if(options.length)choice(s,'ability-salvage','Waiting Room · Choose a character to return to hand',options,{p:t.p});
+   break;
+  }
+  case 'ability-pay':{
+   const q=z(s,t.p);
+   if(q.stock.length<t.stock||t.discard&&!q.hand.length)break;
+   if(t.discard){
+    choice(s,'ability-pay-card','Hand · Choose one card to discard as cost',q.hand.map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'hand',uid:c.uid}})),{p:t.p,task:t});
+   }else{
+    for(let i=0;i<t.stock;i++)take(s,{p:t.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
+    prepend(s,t.then);
+   }
+   break;
+  }
+  case 'ability-search':{
+   const q=z(s,t.p);
+   const options=q.deck.filter(c=>{
+    const card=get(c.id);
+    return card?.type==='Character'&&(!t.trait||(card.attributes||[]).some(trait=>trait.replace(/^《|》$/g,'')===t.trait));
+   }).map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id})).sort((a,b)=>a.label.localeCompare(b.label)||a.value.localeCompare(b.value));
+   if(options.length)choice(s,'ability-search','Deck · Choose up to one eligible character',[...options,{value:'pass',label:'Choose none and shuffle'}],{p:t.p,task:t});
+   else shuffle(q.deck);
+   break;
+  }
   case 'declare-request':beginAttack(s,t.ref,t.attackType);break;
   case 'trigger-start':s.step='Trigger';prepend(s,check(s,'Beginning of trigger step'),{type:'trigger-reveal'});break;
   case 'trigger-reveal':{const q=z(s,a.attack.p);if(!q.deck.length){choice(s,'blocked','No deck card available. Resolve rule procedures or use manual correction.',[{value:'retry',label:'Recheck and retry'}],{task:t});break;}const c=q.deck.pop();c.faceDown=false;q.resolution.push(c);a.trigger={uid:c.uid,p:a.attack.p,icons:triggerIcons(get(c.id))};log(s,'Trigger revealed: '+get(c.id)?.code);flash(s,a.attack.p,c,'trigger','Trigger check');prepend(s,{type:'trigger-icons'});break;}
@@ -205,12 +355,55 @@ export function createResolver(card){
   if(['POOL','DRAW'].includes(icon)){if(a.optionalTop!=='ask'){log(s,'Automatic '+icon+' trigger choice: take the top card.');prepend(s,{type:'optional-move',p,to:icon==='DRAW'?'hand':'stock'});return;}choice(s,'optional-top',icon==='DRAW'?'Draw trigger · draw a card?':'Pool / Treasure · put top deck card into stock?',[{value:'yes',label:'Yes'},{value:'no',label:'Decline'}],{p,to:icon==='DRAW'?'hand':'stock'});return;}
   let opts=[];if(icon==='RETURN')opts=optionsStage(s,1-p);if(['COMEBACK','GATE','STANDBY','CHOICE'].includes(icon))opts=q.waiting.filter(c=>{const d=get(c.id);return icon==='GATE'?d?.type==='Climax':d?.type==='Character'&&(icon!=='STANDBY'||Number(d.level)<=q.level.length+1)&&(icon!=='CHOICE'||triggerIcons(d).includes('SOUL'));}).map(c=>({value:c.uid,label:get(c.id)?.name,card:c.id,ref:{p,z:'waiting',uid:c.uid}}));
   if(['RETURN','COMEBACK','GATE','STANDBY','CHOICE'].includes(icon)){if(!opts.length){log(s,icon+' has no eligible target; passed automatically.');return;}choice(s,'trigger-target',icon+' · choose up to one card',[...opts,{value:'pass',label:'Decline'}],{p,icon});return;}choice(s,'unknown-icon','Unsupported trigger icon: '+icon,[{value:'done',label:'Resolved manually'}],{unsupported:[{text:'Resolve the printed icon manually before continuing.'}]});}
- function beginAttack(s,r,type){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver)throw Error('Finish the current resolution first.');const c=inst(s,r),d=get(c?.id);if(s.phase!==5||s.active!==r.p||!r.z.startsWith('center-')||!c||c.orientation!=='stand'||d?.type!=='Character')throw Error('A standing active-player center-stage character is required.');if(s.turn===1&&(s.attacksThisTurn||0)>=1)throw Error('The starting player may attack only once on the first turn.');if(a.attackPhaseTurn!==s.turn){a.attackPhaseTurn=s.turn;prepend(s,check(s,'Beginning of attack phase'),check(s,'Beginning of attack declaration step'),{type:'declare-request',ref:{...r},attackType:type});run(s);return;}const dz=facing(r.z),def=z(s,1-r.p)[dz].at(-1);if(!def)type='direct';else if(!['frontal','side'].includes(type))throw Error('Choose frontal or side against the opposing character.');a.attack={p:r.p,ref:{...r},type,defender:def?{p:1-r.p,z:dz,uid:def.uid}:null};c.orientation='rest';s.attackType=type[0].toUpperCase()+type.slice(1);s.attacksThisTurn=(s.attacksThisTurn||0)+1;s.step='Attack declaration';if(type==='direct')effect(s,r,{soul:1},'Direct attack','attack');if(type==='side')effect(s,r,{soul:-Math.max(0,stats(s,{p:1-r.p,z:dz,uid:def.uid}).level||0)},'Side attack · defending level at declaration','attack');for(const text of abilityLines(d)){const ab=parseAbility(text);if(ab?.kind==='attack-self')effect(s,r,ab,text);}prepend(s,check(s,'Attack declared / after rest'),{type:'trigger-start'});log(s,'Player '+(r.p+1)+' declared '+type+' attack; attacker rested.');run(s);}
+ function beginAttack(s,r,type){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver)throw Error('Finish the current resolution first.');const c=inst(s,r),d=get(c?.id);if(s.phase!==5||s.active!==r.p||!r.z.startsWith('center-')||!c||c.orientation!=='stand'||d?.type!=='Character')throw Error('A standing active-player center-stage character is required.');if(s.turn===1&&(s.attacksThisTurn||0)>=1)throw Error('The starting player may attack only once on the first turn.');if(a.attackPhaseTurn!==s.turn){a.attackPhaseTurn=s.turn;prepend(s,check(s,'Beginning of attack phase'),check(s,'Beginning of attack declaration step'),{type:'declare-request',ref:{...r},attackType:type});run(s);return;}const dz=facing(r.z),def=z(s,1-r.p)[dz].at(-1);if(!def)type='direct';else if(!['frontal','side'].includes(type))throw Error('Choose frontal or side against the opposing character.');a.attack={p:r.p,ref:{...r},type,defender:def?{p:1-r.p,z:dz,uid:def.uid}:null};c.orientation='rest';s.attackType=type[0].toUpperCase()+type.slice(1);s.attacksThisTurn=(s.attacksThisTurn||0)+1;s.step='Attack declaration';if(type==='direct')effect(s,r,{soul:1},'Direct attack','attack');if(type==='side')effect(s,r,{soul:-Math.max(0,stats(s,{p:1-r.p,z:dz,uid:def.uid}).level||0)},'Side attack · defending level at declaration','attack');queueTriggered(s,r,c,'attack');prepend(s,check(s,'Attack declared / after rest'),{type:'trigger-start'});log(s,'Player '+(r.p+1)+' declared '+type+' attack; attacker rested.');run(s);}
+ function finishAbilityLook(s,t){
+  if(t.boost&&inst(s,t.source))effect(s,t.source,t.boost,t.label);
+ }
+ function lookForAbility(s,t,count){
+  if(!count)return finishAbilityLook(s,t);
+  const cards=z(s,t.p).deck.slice(-count).reverse();
+  const options=cards.map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id}));
+  choice(s,'ability-look-target','Top of Deck · Choose up to one card to put into hand',[...options,{value:'pass',label:'Put all looked-at cards in Waiting Room'}],
+   {p:t.p,task:t,looked:cards.map(c=>c.uid)});
+ }
  function respond(s,id,value,extra={}){if(s.cost)throw Error('Finish the complete cost and end cost-payment suspension before continuing.');const a=auto(s),c=a.choice;if(!c||c.id!==id)throw Error('This choice has already been resolved.');const option=c.options.find(o=>o.value===value);if(!option)throw Error('Choose an available option.');a.choice=null;switch(c.kind){
   case 'act-target':{
    const {action,label}=c.task;
    if(action.kind==='buff')effect(s,option.ref,action.modifier,label);
+   else if(action.kind==='stand')inst(s,option.ref).orientation='stand';
    else take(s,option.ref,action.kind==='bounce'?'hand':'waiting');
+   break;
+  }
+  case 'ability-offer':if(value==='resolve')prepend(s,...c.task.tasks);break;
+  case 'trigger-order':{
+   const next=a.triggered.filter(t=>t.p===c.p)[+value];
+   a.triggered.splice(a.triggered.indexOf(next),1);
+   prepend(s,next,{type:'trigger-continue'});
+   break;
+  }
+  case 'auto-manual':break;
+  case 'ability-count':
+   if(c.task.type==='ability-look')lookForAbility(s,c.task,+value);
+   else prepend(s,...Array.from({length:+value},()=>({type:'draw',p:c.p})));
+   break;
+  case 'ability-look-target':
+   if(value!=='pass')take(s,{p:c.p,z:'deck',uid:value},'hand');
+   prepend(s,...c.looked.filter(uid=>uid!==value).map(uid=>({type:'ability-look-discard',p:c.p,uid})),{type:'ability-look-finish',task:c.task});
+   break;
+  case 'ability-salvage':take(s,option.ref,'hand');break;
+  case 'ability-pay-card':{
+   const q=z(s,c.p);
+   for(let i=0;i<c.task.stock;i++)take(s,{p:c.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
+   take(s,option.ref,'waiting');
+   prepend(s,c.task.then);
+   break;
+  }
+  case 'ability-search':{
+   if(value!=='pass'){
+    const card=take(s,{p:c.p,z:'deck',uid:value},'hand');
+    if(card)flash(s,c.p,card,'ability','Card found by deck search');
+   }
+   shuffle(z(s,c.p).deck);
    break;
   }
   case 'rule-order':if(value==='level')levelChoice(s,c.p);else refreshNow(s,c.p);break;
@@ -221,10 +414,10 @@ export function createResolver(card){
   case 'trigger-target':if(value!=='pass'){if(c.icon==='STANDBY')choice(s,'standby-position','Choose any stage position (occupied card will go to waiting)',stageKeys.map(k=>({value:k,label:k})),{p:c.p,ref:option.ref});else if(c.icon==='CHOICE')choice(s,'choice-destination','Put chosen character in hand or stock',[{value:'hand',label:'Hand'},{value:'stock',label:'Stock'}],{ref:option.ref});else take(s,option.ref,'hand');}break;
   case 'standby-position':{for(const old of [...z(s,c.p)[value]])take(s,{p:c.p,z:value,uid:old.uid},'waiting');const obj=take(s,c.ref,value);obj.orientation='rest';break;}
   case 'choice-destination':take(s,c.ref,value);break;
-  case 'counter':if(value==='pass')prepend(s,check(s,'After counter step'),{type:'damage-start'});else {const p=c.p,ref={p,z:'hand',uid:value};if(option.backup){const b=option.backup;for(let i=0;i<b.cost;i++)take(s,{p,z:'stock',uid:z(s,p).stock.at(-1).uid},'waiting');take(s,ref,'waiting');if(inst(s,a.attack.defender))effect(s,a.attack.defender,{power:b.power},'Backup');prepend(s,check(s,'After Backup (other abilities manual)'),{type:'damage-start'});}else {choice(s,'manual-counter','Counter event · verify additional printed requirements, pay costs, resolve manually',[{value:'done',label:'Legal counter resolved manually'},{value:'cancel',label:'Do not play; return to response choice'}],{p,uid:value});}}break;
+  case 'counter':if(value==='pass')prepend(s,check(s,'After counter step'),{type:'damage-start'});else {const p=c.p,ref={p,z:'hand',uid:value};if(option.backup){const b=option.backup;for(let i=0;i<b.cost;i++)take(s,{p,z:'stock',uid:z(s,p).stock.at(-1).uid},'waiting');queueTriggered(s,ref,take(s,ref,'waiting'),'backup');if(inst(s,a.attack.defender))effect(s,a.attack.defender,{power:b.power},'Backup');prepend(s,check(s,'After Backup (other abilities manual)'),{type:'damage-start'});}else {choice(s,'manual-counter','Counter event · verify additional printed requirements, pay costs, resolve manually',[{value:'done',label:'Legal counter resolved manually'},{value:'cancel',label:'Do not play; return to response choice'}],{p,uid:value});}}break;
   case 'manual-counter':prepend(s,value==='cancel'?{type:'counter'}:check(s,'After manual counter'),value==='cancel'?null:{type:'damage-start'});break;
   case 'damage-view':prepend(s,{type:a.damage.canceled||!a.damage.remaining?'damage-finish':'damage-reveal'});break;
-  case 'battle':{const atk=inst(s,a.attack.ref),def=inst(s,a.attack.defender),ap=extra.attacker??c.attacker.power,dp=extra.defender??c.defender.power;if(!Number.isFinite(+ap)||!Number.isFinite(+dp))throw Error('Enter valid battle power values.');if(atk&&def){if(+ap<=+dp)atk.orientation='reverse';if(+dp<=+ap)def.orientation='reverse';log(s,'Battle '+ap+' versus '+dp+'; lower power reversed (both on tie).');}prepend(s,{type:'attack-end'});break;}
+  case 'battle':{const atk=inst(s,a.attack.ref),def=inst(s,a.attack.defender),ap=extra.attacker??c.attacker.power,dp=extra.defender??c.defender.power;if(!Number.isFinite(+ap)||!Number.isFinite(+dp))throw Error('Enter valid battle power values.');if(atk&&def){if(+ap<=+dp)reverseCharacter(s,a.attack.ref);if(+dp<=+ap)reverseCharacter(s,a.attack.defender);log(s,'Battle '+ap+' versus '+dp+'; lower power reversed (both on tie).');}prepend(s,{type:'attack-end'});break;}
   case 'target-effect':{
    const picked=c.picked||[];
    if(value==='pass'){for(const ref of picked)effect(s,ref,{power:c.task.power,soul:c.task.soul},c.task.label);}
@@ -248,19 +441,20 @@ export function createResolver(card){
   const a=auto(s);
   a.effects=a.effects.filter(e=>(e.expires==='persistent'||e.turn===s.turn)&&allStage(s,e.p).some(r=>r.uid===e.uid));
   if(before)for(const p of [s.active,1-s.active]){
-   const sources=[...allStage(s,p),...z(s,p).climax.map(c=>({p,z:'climax',uid:c.uid}))];
+   const prior=before.players[p].zones;
+   const q=z(s,p);
+   const sources=[...allStage(s,p),...q.climax.map(c=>({p,z:'climax',uid:c.uid}))];
    for(const source of sources){
     const card=inst(s,source);
-    if(card.faceDown||!before.players[p].zones.hand.some(c=>c.uid===card.uid))continue;
-    const data=get(card.id),label=data?.code||data?.name||'Played card';
-    for(const text of abilityLines(data)){
-     const ability=parseAbility(text);
-     if(ability?.kind.startsWith('entry-')&&(!ability.zone||ability.zone===(source.z==='climax'?'climax':'stage'))){
-      if(ability.draw)a.queue.push({type:'draw',p});
-      if(ability.stockTop)a.queue.push({type:'optional-move',p,to:'stock'});
-      a.queue.push({type:ability.kind,p,source,label,...ability});
-     }else if(!ability&&/^【(?:AUTO|自)】/.test(text))a.queue.push({type:'checkpoint',p,title:'Card entered play · resolve unsupported entry abilities'});
-    }
+    if(prior.hand.some(c=>c.uid===card.uid))queueTriggered(s,source,card,source.z==='climax'?'climax':'stage');
+   }
+   for(const slot of stageKeys)for(const card of prior[slot]){
+    const ref={p,z:slot,uid:card.uid};
+    const unchanged=timing=>(before.auto?.triggerMarks?.[card.uid+':'+timing]||0)===(a.triggerMarks?.[card.uid+':'+timing]||0);
+    if(unchanged('waiting')&&q.waiting.some(c=>c.uid===card.uid))queueTriggered(s,ref,card,'waiting');
+    const current=stageKeys.flatMap(key=>q[key]).find(c=>c.uid===card.uid);
+    if(!current&&a.activatedUses)delete a.activatedUses[card.uid];
+    if(unchanged('reverse')&&card.orientation!=='reverse'&&current?.orientation==='reverse')queueTriggered(s,ref,current,'reverse');
    }
   }
   run(s);
@@ -278,14 +472,17 @@ export function createResolver(card){
   const selected=activatedAbilities(card)[index];
   if(!selected?.action)throw Error('This ACT ability requires manual resolution.');
   const action=selected.action,q=z(s,ref.p),label=card.code||card.name;
+  if(action.once&&a.activatedUses?.[ref.uid]?.[index]===s.turn)throw Error('This ability has already been activated this turn.');
   if(q.stock.length<action.stock||action.rest&&instance.orientation!=='stand')throw Error('You cannot pay the full cost of this ability.');
+  if(action.once){a.activatedUses??={};a.activatedUses[ref.uid]??={};a.activatedUses[ref.uid][index]=s.turn;}
   for(let i=0;i<action.stock;i++)take(s,{p:ref.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
   if(action.rest)instance.orientation='rest';
   if(action.sacrifice)take(s,ref,'waiting');
   log(s,'Player '+(ref.p+1)+' activated '+label+' · '+selected.text);
   const tasks=[];
   if(['draw','draw-discard'].includes(action.kind))tasks.push({type:'draw',p:ref.p});
-  if(action.kind!=='draw')tasks.push({type:'act-effect',p:ref.p,action,label,source:ref});
+  if(action.kind==='simple')tasks.push({...action.task,p:ref.p,label,source:ref});
+  else if(action.kind!=='draw')tasks.push({type:'act-effect',p:ref.p,action,label,source:ref});
   prepend(s,...tasks,check(s,'After activated ability'));
   run(s);
  }

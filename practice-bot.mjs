@@ -41,9 +41,13 @@ export function nextPracticeBotAction(match, catalog, resolver) {
 
   const choice = auto.choice;
   if (choice) {
-    if (choicePlayer(match, choice) !== bot || ['blocked', 'unknown-icon'].includes(choice.kind)) return null;
+    if (choicePlayer(match, choice) !== bot || ['blocked', 'unknown-icon', 'auto-manual'].includes(choice.kind)) return null;
     let option;
-    if (choice.kind === 'discard') {
+    if (choice.kind === 'ability-offer') {
+      option = choice.options.find(item => item.value === 'resolve');
+    } else if (choice.kind === 'ability-count') {
+      option = choice.options.at(-1);
+    } else if (choice.kind === 'discard') {
       option = [...choice.options].sort((a, b) => score({id:a.card}) - score({id:b.card}))[0];
     } else if (choice.kind === 'counter' && auto.attack?.defender) {
       const attacker = resolver.stats(match, auto.attack.ref).power;
