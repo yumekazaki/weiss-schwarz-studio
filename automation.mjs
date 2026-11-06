@@ -130,4 +130,3 @@ export function createResolver(card){
  function finishReveal(s,id){const a=auto(s);if(!a.reveal||a.reveal.id!==id)throw Error('This reveal has already finished.');a.reveal=null;run(s);}
  return {ruleInterrupts,stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,manualEffect:effect,auto};
 }
-
