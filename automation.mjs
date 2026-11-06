@@ -19,8 +19,17 @@ function modifierRule(match,kind,extra={},group=1){
  const modifier=match&&modifiers(match[group]);
  return modifier?{kind,...extra,...modifier}:null;
 }
+const hasTrait=(card,trait)=>(card?.attributes||[]).some(value=>value.replace(/^《|》$/g,'')===trait);
 export function parseAbility(text){
  const t=clean(text).split(/\s*\(: When this card triggers|\s+（\[\[[^\]]+\]\]：このカードがトリガーした時/)[0].trim();let m;
+ if((m=t.match(/^【CONT】 (During your (opponent's )?turn, )?all of your (other )?(?:《([^》]+)》 )?characters( with markers)? get (.+)\.$/i)))
+  return modifierRule(m,'global',{condition:m[1]?(m[2]?'opponent':'own'):'always',other:!!m[3],trait:m[4],markers:!!m[5]},6);
+ if((m=t.match(/^【CONT】 If you have (\d+) or more other 《([^》]+)》 characters, this card gets (.+)\.$/i)))
+  return modifierRule(m,'self',{condition:'others',minimum:+m[1],trait:m[2]},3);
+ if((m=t.match(/^【永】 (あなたのターン中、|相手のターン中、)?このカードの(.+)。$/)))
+  return modifierRule(m,'self',{condition:m[1]?.startsWith('相手')?'opponent':m[1]?'own':'always'},2);
+ if((m=t.match(/^【永】 (あなたのターン中、|相手のターン中、)?(他の)?(?:《([^》]+)》の)?あなたのキャラすべてに、(.+)。$/)))
+  return modifierRule(m,'global',{condition:m[1]?.startsWith('相手')?'opponent':m[1]?'own':'always',other:!!m[2],trait:m[3]},4);
  if((m=t.match(/^【CONT】 All of (your opponent's|your) (other )?characters get (.+)\.$/i)))return modifierRule(m,'global',{opponent:m[1].toLowerCase()!=='your',other:!!m[2]},3);
  if((m=t.match(/^【永】 あなたの(他の)?キャラすべてに、(.+)。$/)))return modifierRule(m,'global',{other:!!m[1]},2);
  if((m=t.match(/^【CONT】 (During your (opponent's )?turn, )?this card gets (.+)\.$/i)))return modifierRule(m,'self',{condition:m[1]?(m[2]?'opponent':'own'):'always'},3);
@@ -32,9 +41,10 @@ export function parseAbility(text){
  const entry=t.match(/^【AUTO】 When this card is placed (?:on|in) (your climax area|the stage|stage) from (?:your )?hand, (.+)\.$/i);
  if(entry){
   const [,location,body]=entry,zone=location.toLowerCase()==='your climax area'?'climax':'stage';
-  if((m=body.match(/^this card gets (.+) until end of turn$/i)))return modifierRule(m,'entry-self',{zone});
-  if((m=body.match(/^(draw (?:a|1) card, )?choose (up to )?(1|one|2|two) of your (other )?(?:《([^》]+)》 )?characters, and (?:that character gets|those characters get) (.+) until end of turn$/i)))
-   return modifierRule(m,'entry-target',{zone,draw:!!m[1],optional:!!m[2],count:/^(2|two)$/i.test(m[3])?2:1,other:!!m[4],trait:m[5]},6);
+  if((m=body.match(/^this card gets (.+) until (end of turn|the end of your opponent's next turn)$/i)))
+   return modifierRule(m,'entry-self',{zone,opponentNext:m[2].toLowerCase()!=='end of turn'});
+  if((m=body.match(/^(draw (?:a|1) card, )?choose (up to )?(1|one|2|two) of your (other )?(?:《([^》]+)》 )?characters, and (?:that character gets|those characters get) (.+) until (end of turn|the end of your opponent's next turn)$/i)))
+   return modifierRule(m,'entry-target',{zone,draw:!!m[1],optional:!!m[2],count:/^(2|two)$/i.test(m[3])?2:1,other:!!m[4],trait:m[5],opponentNext:m[7].toLowerCase()!=='end of turn'},6);
   if((m=body.match(/^choose (?:1|one) character in your opponent's center stage, and that character gets (.+) until end of turn$/i)))
    return modifierRule(m,'entry-target',{zone,opponent:true,center:true});
   if((m=body.match(/^put the top card of your deck into your stock, and all of your characters get (.+) until end of turn$/i)))
@@ -99,6 +109,8 @@ function simpleTriggeredEffect(body){
   return {type:'ability-draw',count:m[3].toLowerCase()==='a'?1:+m[3],optional:!!m[2]||/^you may/i.test(m[1]),upTo:!!m[2]};
  if((m=body.match(/^(You may put|Put) the top (?:(\d+) cards?|card) of your deck into your waiting room\.$/i)))
   return {type:'ability-mill',count:+(m[2]||1),optional:/^you may/i.test(m[1])};
+ if((m=body.match(/^(You may put|Put) the top X cards of your deck into your waiting room\. X is equal to the number of 《([^》]+)》 characters you have\.$/i)))
+  return {type:'ability-mill',countTrait:m[2],optional:/^you may/i.test(m[1])};
  if((m=body.match(/^あなたは(\d+)枚(引く|引いてよい)。$/)))return {type:'ability-draw',count:+m[1],optional:m[2]==='引いてよい'};
  if((m=body.match(/^あなたは自分の山札の上から(\d+)枚を、控え室に置く。$/)))return {type:'ability-mill',count:+m[1]};
  if((m=body.match(/^Look at (up to )?(\d+) cards? from the top of your deck, choose up to (?:1|one) card from among them, put it into your hand, (?:and )?put the rest into your waiting room(?:, and this card gets (.+) until end of turn)?\.$/i))){
@@ -121,15 +133,21 @@ export function activatedAbilities(card){
   .map((text,index)=>({index,text,action:parseActivatedAbility(text)}));
 }
 function parseActivatedAbility(text){
+ const jp=text.match(/^【起】\s*［(?:\((\d+)\)\s*)?(このカードを【レスト】する)?］\s*あなたは(他の)?自分のキャラを1枚選び、そのターン中、(.+)。$/);
+ if(jp){
+  const modifier=modifiers(jp[4]);
+  if(modifier&&(jp[1]||jp[2]))return {kind:'buff',stock:+(jp[1]||0),rest:!!jp[2],other:!!jp[3],modifier};
+ }
  const parts=text.replace(/^\[ACT\]/,'【ACT】').match(/^【ACT】 (?:(Resonate|Brainstorm) )?\[([^\]]+)\] (.+)$/);
- if(!parts)return null;
- const [,keyword,cost,printedBody]=parts;
+ const free=parts?null:text.replace(/^\[ACT\]/,'【ACT】').match(/^【ACT】 ((?:This ability activates up to 1 time per turn\. )?(?:Draw|Choose|Put|Look at|Search) .+)$/i);
+ if(!parts&&!free)return null;
+ const [,keyword,cost,printedBody]=parts||[null,null,'',free[1]];
  const once=/^This ability activates up to 1 time per turn\. /i;
  const body=printedBody.replace(once,'');
  const stockRest=cost.match(/^(?:\((\d+)\)(?: (【REST】 this card))?|(【REST】 this card))$/);
  const resonate=cost.match(/^\((\d+)\) Reveal a card named "([^"]+)" in your hand & 【REST】 this card$/);
  const sacrifice=cost==='Put this card into your waiting room';
- if(!stockRest&&!sacrifice&&!resonate)return null;
+ if(cost&&!stockRest&&!sacrifice&&!resonate)return null;
  const payment={stock:Number(stockRest?.[1]||resonate?.[1]||0),rest:!!(stockRest?.[2]||stockRest?.[3]||resonate),sacrifice,once:once.test(printedBody),revealName:resonate?.[2]};
  if(keyword==='Brainstorm'){
   const brainstorm=body.match(/^Flip over (\d+) cards from the top of your deck, and put them into your waiting room\. For each climax revealed among those cards, (draw up to (?:1|one) card|choose up to (?:1|one) character in your waiting room, and return it to your hand)\.$/i);
@@ -148,6 +166,36 @@ function parseActivatedAbility(text){
  if(simple&&!simple.optional)return {...payment,kind:'simple',task:simple};
  return null;
 }
+function automaticPayment(text){
+ const stock=text.match(/^【AUTO】\s*\[\((\d+)\)\]/i)||text.match(/^【自】\s*［\((\d+)\)］/);
+ if(stock)return {stock:+stock[1]};
+ const clock=text.match(/^【AUTO】\s*\[\((\d+)\) Put the top card of your deck into your clock\]/i);
+ if(clock)return {stock:+clock[1],clockTop:true};
+ const discard=text.match(/^【AUTO】\s*\[(?:\((\d+)\) )?Put (?:1|one) (card|climax|character) from your hand into your waiting room\]/i);
+ if(discard)return {stock:+(discard[1]||0),discard:discard[2].toLowerCase()};
+ return null;
+}
+
+function automaticPlan(text){
+ const trigger=automaticTiming(text);
+ if(!trigger)return null;
+ const parsed=parseAbility(text);
+ if(parsed?.kind.startsWith('entry-')||parsed?.kind==='attack-self')return {timing:trigger.kind,parsed};
+ const payment=automaticPayment(text);
+ const paidBody=trigger.body.match(/^You may pay the cost\. If you do, (.+)$/i)
+  ||trigger.body.match(/^あなたはコストを払ってよい。そうしたら、(.+)$/);
+ const simple=payment&&paidBody?simpleTriggeredEffect(paidBody[1]):/^【(?:AUTO|自)】\s*(?:\[|［)/.test(text)?null:simpleTriggeredEffect(trigger.body);
+ return {timing:trigger.kind,simple,payment:paidBody?payment:null,
+  optional:!!(simple?.optional||payment&&paidBody||!simple&&/^(?:you may|あなたは.*(?:してよい|払ってよい))/i.test(trigger.body))};
+}
+export function abilityCoverage(card){
+ const acts=activatedAbilities(card);
+ return abilityLines(card).filter(text=>/^【(?:CONT|AUTO|ACT|永|自|起)】|^\[ACT\]/.test(text)).map(text=>{
+  const parsed=parseAbility(text),plan=automaticPlan(text),act=acts.find(a=>a.text===text);
+  const automated=!!(act?.action||parsed?.kind==='backup'||['global','self','assist'].includes(parsed?.kind)||plan?.parsed||plan?.simple);
+  return {text,status:automated?'automatic':plan?'timing-only':'manual'};
+ });
+}
 export function createResolver(card){
  const get=id=>typeof card==='function'?card(id):card.get(id),z=(s,p)=>s.players[p].zones;
  function auto(s){const a=s.auto??={queue:[],choice:null,serial:0,effects:[],shots:[],results:[],enabled:true};a.reviews??=[];a.reveal??=null;a.optionalTop??='take';return a;}
@@ -155,7 +203,12 @@ export function createResolver(card){
  const allStage=(s,p)=>stageKeys.flatMap(k=>z(s,p)[k].map(c=>({p,z:k,uid:c.uid})));
  const inst=(s,r)=>r&&z(s,r.p)[r.z]?.find(c=>c.uid===r.uid);
  function take(s,r,to,p=r.p){const src=z(s,r.p)[r.z],i=src.findIndex(c=>c.uid===r.uid);if(i<0)return null;const [c]=src.splice(i,1);if(stage(r.z)&&!stage(to)){if(auto(s).activatedUses)delete auto(s).activatedUses[c.uid];if(to==='waiting')queueTriggered(s,r,c,'waiting');c.orientation='stand';z(s,r.p).waiting.push(...z(s,r.p)['markers:'+r.z].splice(0));auto(s).effects=auto(s).effects.filter(e=>e.uid!==c.uid);}c.revealed=false;c.faceDown=to==='stock';z(s,p)[to].push(c);return c;}
- function effect(s,r,vals,label,duration='turn'){const c=inst(s,r);if(!c)throw Error('Choose a character still on stage.');if(['soul','power','level'].some(k=>vals[k]!==undefined&&!Number.isFinite(vals[k])))throw Error('Modifiers must be finite numbers.');auto(s).effects.push({uid:c.uid,p:r.p,...vals,label,turn:s.turn,expires:duration});}
+ function effect(s,r,vals,label,duration='turn',untilTurn=s.turn){const c=inst(s,r);if(!c)throw Error('Choose a character still on stage.');if(['soul','power','level'].some(k=>vals[k]!==undefined&&!Number.isFinite(vals[k])))throw Error('Modifiers must be finite numbers.');auto(s).effects.push({uid:c.uid,p:r.p,...vals,label,turn:s.turn,untilTurn,expires:duration});}
+ function applyEntryModifier(s,ref,t){
+  const until=t.opponentNext?s.turn+(s.active===t.p?1:2):s.turn;
+  effect(s,ref,{power:t.power,soul:t.soul},t.label,'turn',until);
+ }
+ function turnCondition(s,p,condition){return !condition||condition==='always'||condition==='own'&&s.active===p||condition==='opponent'&&s.active!==p;}
  function stats(s,r){const c=inst(s,r),info=get(c?.id),out={soul:Number(info?.soul)||0,power:Number(info?.power)||0,level:Number(info?.level)||0,breakdown:[],unsupported:[]};if(!c)return {...out,soul:0,power:0};out.breakdown.push({label:'Printed',soul:out.soul,power:out.power});
   for(const source of [r.p,1-r.p].flatMap(p=>[...allStage(s,p),...z(s,p).climax.map(c=>({p,z:'climax',uid:c.uid}))])){
    const obj=inst(s,source),data=get(obj.id),sameSide=source.p===r.p;
@@ -164,13 +217,13 @@ export function createResolver(card){
     const a=parseAbility(text);
     if(!a){if(sameSide)out.unsupported.push({code:data?.code,text});continue;}
     let applies=false;
-    if(a.kind==='global')applies=(a.opponent?!sameSide:sameSide)&&(!a.other||source.uid!==c.uid);
-    if(a.kind==='self'&&source.uid===c.uid)applies=a.condition==='always'||a.condition==='own'&&s.active===r.p||a.condition==='opponent'&&s.active!==r.p||a.condition==='middle'&&r.z==='center-middle';
+    if(a.kind==='global')applies=(a.opponent?!sameSide:sameSide)&&(!a.other||source.uid!==c.uid)&&turnCondition(s,source.p,a.condition)&&(!a.trait||hasTrait(info,a.trait))&&(!a.markers||z(s,r.p)['markers:'+r.z]?.length>0);
+    if(a.kind==='self'&&source.uid===c.uid)applies=turnCondition(s,r.p,a.condition)||a.condition==='middle'&&r.z==='center-middle'||a.condition==='others'&&allStage(s,r.p).filter(other=>other.uid!==r.uid&&!inst(s,other).faceDown&&hasTrait(get(inst(s,other).id),a.trait)).length>=a.minimum;
     if(a.kind==='assist'&&sameSide&&source.z.startsWith('back-'))applies=source.z==='back-left'?['center-left','center-middle'].includes(r.z):['center-middle','center-right'].includes(r.z);
-    if(applies){out.soul+=a.soul||0;out.power+=a.power||0;out.breakdown.push({label:data.code+' · '+text,soul:a.soul||0,power:a.power||0});}
+    if(applies){out.soul+=a.soul||0;out.power+=a.power||0;out.breakdown.push({label:data.code+' · '+text,soul:a.soul||0,power:a.power||0,expires:'continuous'});}
    }
   }
-  for(const e of auto(s).effects.filter(e=>e.uid===c.uid&&(e.expires==='persistent'||e.turn===s.turn))){out.soul+=e.soul||0;out.power+=e.power||0;out.level+=e.level||0;out.breakdown.push(e);}return out;
+  for(const e of auto(s).effects.filter(e=>e.uid===c.uid&&(e.expires==='persistent'||(e.untilTurn??e.turn)>=s.turn))){out.soul+=e.soul||0;out.power+=e.power||0;out.level+=e.level||0;out.breakdown.push(e);}return out;
  }
  function choice(s,kind,title,options,extra={}){auto(s).choice={id:++auto(s).serial,kind,title,options,...extra};}
  function prepend(s,...tasks){auto(s).queue.unshift(...tasks.filter(Boolean));}
@@ -179,41 +232,24 @@ export function createResolver(card){
   const a=auto(s),key=instance.uid+':'+timing;
   a.triggerMarks??={};
   a.triggerMarks[key]=(a.triggerMarks[key]||0)+1;
-  const card=get(instance.id),label=card?.code||card?.name||'Card ability';
+  const card=get(instance.id),label=card?.name||card?.code||'Card ability';
   for(const text of abilityLines(card)){
-   const trigger=automaticTiming(text);
-   if(trigger?.kind!==timing)continue;
-   const parsed=parseAbility(text);
+   const plan=automaticPlan(text);
+   if(plan?.timing!==timing)continue;
+   const {parsed,simple,payment}=plan;
    let tasks=[];
    if(parsed?.kind.startsWith('entry-')){
     if(parsed.draw)tasks.push({type:'draw',p:source.p});
     if(parsed.stockTop)tasks.push({type:'optional-move',p:source.p,to:'stock'});
     tasks.push({type:parsed.kind,p:source.p,source,label,...parsed});
    }else if(parsed?.kind==='attack-self')tasks=[{type:'entry-self',p:source.p,source,label,...parsed}];
-   else{
-    const paid=automaticPayment(text);
-    const paidBody=trigger.body.match(/^You may pay the cost\. If you do, (.+)$/i)
-     ||trigger.body.match(/^あなたはコストを払ってよい。そうしたら、(.+)$/);
-    const simple=paid&&paidBody?simpleTriggeredEffect(paidBody[1]):/^【(?:AUTO|自)】\s*(?:\[|［)/.test(text)?null:simpleTriggeredEffect(trigger.body);
-    if(simple)tasks=[{...simple,p:source.p,source,label}];
-    if(simple?.type==='ability-draw'&&simple.count===1&&simple.upTo&&!paid)tasks[0].upTo=false;
-    if(simple&&paid&&paidBody){
-     if(!canPayAutomatic(s,source.p,paid))continue;
-     tasks=[{type:'ability-pay',...paid,p:source.p,then:tasks[0],optional:true}];
-    }
+   else if(simple){
+    const task={...simple,p:source.p,source,label};
+    if(simple.type==='ability-draw'&&simple.count===1&&simple.upTo&&!payment)task.upTo=false;
+    tasks=[payment?{type:'ability-pay',...payment,p:source.p,then:task}:task];
    }
-   const optional=tasks[0]?.optional||!tasks.length&&/^(?:you may|あなたは.*(?:してよい|払ってよい))/i.test(trigger.body);
-   (a.triggered??=[]).push({type:'ability-offer',p:source.p,label,text,optional,tasks});
+   (a.triggered??=[]).push({type:'ability-offer',p:source.p,label,text,optional:plan.optional,tasks});
   }
- }
- function automaticPayment(text){
-  const stock=text.match(/^【AUTO】\s*\[\((\d+)\)\]/i)||text.match(/^【自】\s*［\((\d+)\)］/);
-  if(stock)return {stock:+stock[1]};
-  const clock=text.match(/^【AUTO】\s*\[\((\d+)\) Put the top card of your deck into your clock\]/i);
-  if(clock)return {stock:+clock[1],clockTop:true};
-  const discard=text.match(/^【AUTO】\s*\[(?:\((\d+)\) )?Put (?:1|one) (card|climax|character) from your hand into your waiting room\]/i);
-  if(discard)return {stock:+(discard[1]||0),discard:discard[2].toLowerCase()};
-  return null;
  }
  function paymentCards(s,p,t){
   return z(s,p).hand.filter(c=>t.discard==='card'||get(c.id)?.type?.toLowerCase()===t.discard);
@@ -259,7 +295,7 @@ export function createResolver(card){
   if(targets.length&&picked.length<(t.count??1)){
    choice(s,'target-effect','Choose a character for '+t.label+(t.power||t.soul?' · '+[t.power&&((t.power>0?'+':'')+t.power+' power'),t.soul&&((t.soul>0?'+':'')+t.soul+' soul')].filter(Boolean).join(' / '):''),
     [...targets,...(t.optional?[{value:'pass',label:'Done choosing'}]:[])],{p:t.p,task:t,picked});
-  }else for(const ref of picked)effect(s,ref,{power:t.power,soul:t.soul},t.label);
+  }else for(const ref of picked)applyEntryModifier(s,ref,t);
  }
  function supportedBackup(c){return abilityLines(c).map(parseAbility).find(x=>x?.kind==='backup');}
  function counters(s){const a=auto(s).attack;if(!a||a.type!=='frontal')return [];const p=1-a.p,q=z(s,p),level=q.level.length;return q.hand.flatMap(c=>{const data=get(c.id),b=supportedBackup(data),text=abilityLines(data).join(' ');if(b&&inst(s,a.defender)&&level>=b.level&&q.stock.length>=b.cost)return [{value:c.uid,label:data.name+' · Backup +'+b.power+' · pay '+b.cost,card:c.id,backup:b}];
@@ -288,9 +324,11 @@ export function createResolver(card){
   case 'ability-offer':{
    delete a.notice;
    const supported=t.tasks.length>0;
+   if(supported&&!t.optional){prepend(s,...t.tasks);break;}
+   if(t.tasks[0]?.type==='ability-pay'&&!canPayAutomatic(s,t.p,t.tasks[0]))break;
    choice(s,supported?'ability-offer':'auto-manual',t.label+(supported?' · Triggered ability':' · Check this ability manually'),
-    [{value:'resolve',label:supported?(t.optional?'Yes · Resolve':'Resolve required ability'):'Continue after checking / resolving manually'},
-     ...(t.optional?[{value:'pass',label:'No · Decline'}]:[])],
+    [{value:'resolve',label:supported?'Yes · Resolve':'Continue after checking / resolving manually'},
+     ...(t.optional?[{value:'pass',label:'Pass'}]:[])],
     {p:t.p,task:t,abilityText:t.text});
    break;
   }
@@ -299,6 +337,11 @@ export function createResolver(card){
    else prepend(s,...Array.from({length:t.count},()=>({type:'draw',p:t.p})));
    break;
   case 'ability-mill':
+   if(t.countTrait){
+    const count=modifierTargets(s,t.p).filter(o=>hasTrait(get(o.card),t.countTrait)).length;
+    prepend(s,{...t,count,countTrait:null});
+    break;
+   }
    if(t.count&&z(s,t.p).deck.length){
     take(s,{p:t.p,z:'deck',uid:z(s,t.p).deck.at(-1).uid},'waiting');
     if(t.count>1)prepend(s,{...t,count:t.count-1});
@@ -409,7 +452,7 @@ export function createResolver(card){
   case 'attack-end':prepend(s,check(s,'After battle / at end of attack'),{type:'attack-finish'});break;
   case 'attack-finish':a.effects=a.effects.filter(e=>e.expires!=='attack');a.attack=null;s.step='Attack declaration';prepend(s,check(s,'Beginning of next attack declaration step'));log(s,'Attack sub-phase complete. Choose another standing attacker or end attacks.');break;
   case 'entry-target':chooseEntryTargets(s,t);break;
-  case 'entry-self':if(inst(s,t.source))effect(s,t.source,{power:t.power,soul:t.soul},t.label);break;
+  case 'entry-self':if(inst(s,t.source))applyEntryModifier(s,t.source,t);break;
   case 'entry-global':{
    const options=t.stockColor||t.stockLevel!==undefined?z(s,t.p).waiting.filter(c=>{
     const card=get(c.id);
@@ -419,7 +462,7 @@ export function createResolver(card){
    else prepend(s,{...t,type:'entry-global-apply'});
    break;
   }
-  case 'entry-global-apply':for(const {ref} of modifierTargets(s,t.p))effect(s,ref,{power:t.power,soul:t.soul},t.label);break;
+  case 'entry-global-apply':for(const {ref} of modifierTargets(s,t.p))applyEntryModifier(s,ref,t);break;
   case 'optional-move':if(z(s,t.p).deck.length){const obj=z(s,t.p).deck.pop();obj.faceDown=t.to==='stock';z(s,t.p)[t.to].push(obj);}else log(s,'No deck card available for optional trigger transfer.');break;
   case 'draw':if(z(s,t.p).deck.length){const obj=z(s,t.p).deck.pop();obj.faceDown=false;z(s,t.p).hand.push(obj);}else log(s,'No card available to draw.');break;
   case 'act-effect':{
@@ -437,7 +480,7 @@ export function createResolver(card){
   case 'encore':{s.step='Encore';const candidates=[s.active,1-s.active].flatMap(p=>allStage(s,p).filter(r=>inst(s,r).orientation==='reverse'));if(candidates.length===1){const r=candidates[0],obj=take(s,r,'waiting');prepend(s,check(s,'Character moved from stage to waiting'),{type:'encore-offer',p:r.p,position:r.z,card:obj});}else if(candidates.length){const p=candidates[0].p;choice(s,'encore-select','Player '+(p+1)+' · choose the next reversed character to send to waiting',candidates.filter(r=>r.p===p).map(r=>({value:r.uid,label:get(inst(s,r).id)?.name,ref:r})));}else {s.phase=6;prepend(s,check(s,'Beginning of end phase'),{type:'end-discard'});}break;}
   case 'encore-offer':{const canPay=z(s,t.p).stock.length>=3,other=abilityLines(get(t.card.id)).some(text=>/Encore/i.test(text));if(canPay||other)choice(s,'encore-offer','Encore · '+get(t.card.id)?.name,[...(canPay?[{value:'pay',label:'Pay top 3 stock · return rested'}]:[]),...(other?[{value:'manual',label:'Other printed Encore ability'}]:[]),{value:'pass',label:'Decline Encore'}],{task:t,p:t.p});else prepend(s,{type:'encore'});break;}
   case 'end-discard':{const p=s.active,q=z(s,p);if(q.hand.length>7)choice(s,'discard','Player '+(p+1)+' · discard to seven cards',q.hand.map(c=>({value:c.uid,label:get(c.id)?.name,card:c.id})),{p});else{q.waiting.push(...q.climax.splice(0));prepend(s,check(s,'End phase cleanup'),{type:'end-expire'});}break;}
-  case 'end-expire':a.effects=a.effects.filter(e=>e.expires==='persistent');a.shots=[];prepend(s,check(s,'After effects expire'),{type:'turn-ready'});break;
+  case 'end-expire':a.effects=a.effects.filter(e=>e.expires==='persistent'||e.expires==='turn'&&(e.untilTurn??e.turn)>s.turn);a.shots=[];prepend(s,check(s,'After effects expire'),{type:'turn-ready'});break;
   case 'turn-ready':nextTurn(s);break;
   case 'stand':for(const r of allStage(s,s.active))inst(s,r).orientation='stand';prepend(s,check(s,'After standing'),{type:'draw-phase'});break;
   case 'draw-phase':s.phase=1;prepend(s,check(s,'Beginning of draw phase'),{type:'draw',p:s.active},check(s,'After draw'),{type:'clock-phase'});break;
@@ -562,7 +605,7 @@ export function createResolver(card){
   case 'battle':{const atk=inst(s,a.attack.ref),def=inst(s,a.attack.defender),ap=extra.attacker??c.attacker.power,dp=extra.defender??c.defender.power;if(!Number.isFinite(+ap)||!Number.isFinite(+dp))throw Error('Enter valid battle power values.');if(atk&&def){if(+ap<=+dp)reverseCharacter(s,a.attack.ref);if(+dp<=+ap)reverseCharacter(s,a.attack.defender);log(s,'Battle '+ap+' versus '+dp+'; lower power reversed (both on tie).');}prepend(s,{type:'attack-end'});break;}
   case 'target-effect':{
    const picked=c.picked||[];
-   if(value==='pass'){for(const ref of picked)effect(s,ref,{power:c.task.power,soul:c.task.soul},c.task.label);}
+   if(value==='pass'){for(const ref of picked)applyEntryModifier(s,ref,c.task);}
    else chooseEntryTargets(s,c.task,[...picked,option.ref]);
    break;
   }
@@ -581,7 +624,7 @@ export function createResolver(card){
  // A top-deck trigger move must also run the same interrupt checks as every other transfer.
  function afterMutation(s,before){
   const a=auto(s);
-  a.effects=a.effects.filter(e=>(e.expires==='persistent'||e.turn===s.turn)&&allStage(s,e.p).some(r=>r.uid===e.uid));
+  a.effects=a.effects.filter(e=>(e.expires==='persistent'||(e.untilTurn??e.turn)>=s.turn)&&allStage(s,e.p).some(r=>r.uid===e.uid));
   if(before)for(const p of [s.active,1-s.active]){
    const prior=before.players[p].zones;
    const q=z(s,p);
@@ -619,15 +662,27 @@ export function createResolver(card){
   flash(s,ref.p,card,'ability','Resonate cost · Reveal '+action.revealName);
   prepend(s,{...action.task,p:ref.p,label,source:ref},check(s,'After activated ability'));
  }
- function activate(s,ref,index){
+ function activationReason(s,ref,index){
   const a=auto(s),instance=inst(s,ref),card=get(instance?.id);
-  if(!a.enabled||a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver||s.cost||s.botOpening!=null)throw Error('Finish the current resolution before activating an ability.');
-  if(s.phase!==3||s.active!==ref.p||!stage(ref.z)||instance?.faceDown||card?.type!=='Character')throw Error('Use a stage character’s ACT ability during your Main phase.');
+  if(!a.enabled)return 'Turn on guided resolution to use automatic ACT abilities.';
+  if(s.setup||s.botOpening!=null)return 'Finish opening setup first.';
+  if(s.undoRequest||s.manualWindow||a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver||s.cost)return 'Finish the current resolution before activating an ability.';
+  if(!instance||instance.faceDown||!stage(ref.z)||card?.type!=='Character')return 'This ACT ability requires a face-up character on your stage.';
+  if(s.active!==ref.p||s.phase!==3)return 'Use this ability during your Main phase.';
   const selected=activatedAbilities(card)[index];
-  if(!selected?.action)throw Error('This ACT ability requires manual resolution.');
-  const action=selected.action,q=z(s,ref.p),label=card.code||card.name;
-  if(action.once&&a.activatedUses?.[ref.uid]?.[index]===s.turn)throw Error('This ability has already been activated this turn.');
-  if(q.stock.length<action.stock||action.rest&&instance.orientation!=='stand')throw Error('You cannot pay the full cost of this ability.');
+  if(!selected?.action)return 'This ACT ability requires manual resolution.';
+  const action=selected.action,q=z(s,ref.p);
+  if(action.once&&a.activatedUses?.[ref.uid]?.[index]===s.turn)return 'This ability has already been activated this turn.';
+  if(q.stock.length<action.stock)return 'You cannot pay the full cost of this ability. It needs '+action.stock+' Stock.';
+  if(action.rest&&instance.orientation!=='stand')return 'You cannot pay the full cost of this ability. This character must be standing.';
+  if(action.revealName&&!q.hand.some(c=>getCardName(get(c.id))===action.revealName))return 'Resonate requires a card named '+action.revealName+' in your hand.';
+  return null;
+ }
+ function activate(s,ref,index){
+  const reason=activationReason(s,ref,index);
+  if(reason)throw Error(reason);
+  const a=auto(s),instance=inst(s,ref),card=get(instance.id);
+  const selected=activatedAbilities(card)[index],action=selected.action,q=z(s,ref.p),label=card.code||card.name;
   if(action.revealName){
    if(action.kind!=='simple')throw Error('This Resonate effect requires manual resolution.');
    const options=q.hand.filter(c=>getCardName(get(c.id))===action.revealName).map(c=>({value:c.uid,label:get(c.id)?.code||action.revealName,card:c.id,ref:{p:ref.p,z:'hand',uid:c.uid}}));
@@ -649,5 +704,5 @@ export function createResolver(card){
   prepend(s,...tasks,check(s,'After activated ability'));
   run(s);
  }
- return {ruleInterrupts,stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,activate,manualEffect:effect,auto};
+ return {ruleInterrupts,stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,activate,activationReason,manualEffect:effect,auto};
 }

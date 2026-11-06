@@ -163,3 +163,10 @@ body:has(#online.online-fullscreen) #toast { z-index: 1200; }
 @media (max-width: 480px) {
   .mulligan-hand { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
+
+.zone.eligible-ability-target {
+  outline: 3px solid #ffdb83;
+  outline-offset: 2px;
+  box-shadow: 0 0 14px #ffce7290;
+  cursor: pointer;
+}

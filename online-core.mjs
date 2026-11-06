@@ -1,5 +1,5 @@
 import {createMatch,draw,move,shuffle,validate,stage,zones,playFromHandError} from './engine.mjs';
-import {createResolver,stageKeys} from './automation.mjs';
+import {activatedAbilities,createResolver,stageKeys} from './automation.mjs';
 const copy=x=>structuredClone(x);
 const need=(ok,msg)=>{if(!ok)throw Error(msg);};
 const knowledge=s=>JSON.stringify([s.players.map(p=>['deck','hand','stock'].map(z=>p.zones[z].map(c=>[c.uid,c.revealed]))),s.auto?.choice?.looked,s.auto?.choice?.kind==='ability-search'?s.auto.choice.options.map(o=>o.value):null]);
@@ -113,7 +113,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  if(knowledge(s)!==knowledge(original))s.onlineEpoch=Math.max(s.onlineEpoch||0,original.onlineEpoch||0)+1;
  event(s,p,type,args,original);return s;
 }
-export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog);out.stats={};for(let p=0;p<2;p++)for(const z of stageKeys){const c=s.players[p].zones[z][0];if(c&&(!c.faceDown||p===seat||c.revealed))out.stats[c.uid]=r.stats(s,{p,z,uid:c.uid});}
+export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog);out.stats={};out.activation={};for(let p=0;p<2;p++)for(const z of stageKeys){const c=s.players[p].zones[z][0];if(c&&(!c.faceDown||p===seat||c.revealed))out.stats[c.uid]=r.stats(s,{p,z,uid:c.uid});if(c&&p===seat&&!c.faceDown)out.activation[c.uid]=activatedAbilities(catalog.get(c.id)).map(a=>r.activationReason(s,{p,z,uid:c.uid},a.index));}
  for(let p=0;p<2;p++)for(const [z,arr] of Object.entries(out.players[p].zones)){const hideAll=z==='deck'||z==='stock'||z==='hand'&&p!==seat;out.players[p].zones[z]=arr.map((c,i)=>!c.revealed&&(hideAll||c.faceDown&&p!==seat)?{uid:'hidden:'+p+':'+z+':'+i,hidden:true,faceDown:true}:c);}
  const owner=choiceOwner(s),a=out.auto;out.waitingFor=s.setup?.p??owner??s.manualWindow?.p??s.active;
  // Queue/tasks contain deck order, private choice options and card identities. Never send them.

@@ -2,7 +2,7 @@ import {onlineConfig as config} from './online-config.mjs';
 import {phases,zones,playFromHandError} from './engine.mjs';
 import {cardMoveOptions,facingPosition} from './context-actions.mjs';
 import {activatedAbilities,parseAbility} from './automation.mjs';
-import {mountAbilityPicker} from './resolution-ui.mjs';
+import {modifierBreakdown,mountAbilityPicker,stageTargetOptions} from './resolution-ui.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>structuredClone(x),stage=['center-left','center-middle','center-right','back-left','back-right'];
 export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supabase/supabase-js@2.81.1?bundle')){
@@ -150,7 +150,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  function player(who,opponent){const z=s.players[who].zones,front=opponent?[...stage.slice(0,3)].reverse():stage.slice(0,3),back=opponent?[...stage.slice(3)].reverse():stage.slice(3);const card=(c,ref)=>c.hidden?'<span class="card-back">W</span>':'<button class="online-card '+esc(c.orientation)+'" data-online-ref="'+esc(JSON.stringify(ref))+'" data-hover-card="'+esc(c.id)+'">'+api.image(c.id)+'</button><button class="online-zoom" data-online-inspect="'+esc(c.id)+'" aria-label="Inspect '+esc(api.name(c.id))+'">⤢</button>';const stageZone=k=>'<div class="zone online-stage"><span>'+esc(api.zoneName(k))+'</span>'+z[k].map(c=>card(c,{p:who,z:k,uid:c.uid})+(s.stats[c.uid]?'<small>Soul '+s.stats[c.uid].soul+' · <strong class="live-power">Power '+s.stats[c.uid].power.toLocaleString()+'</strong></small>':'')).join('')+'<button data-online-pile="'+who+'|markers:'+k+'" class="online-markers">Markers '+z['markers:'+k].length+'</button></div>';const pile=k=>'<button class="zone online-zone" data-online-pile="'+who+'|'+k+'"><span>'+esc(api.zoneName(k)).toUpperCase()+'</span><b>'+z[k].length+'</b>'+(z[k].at(-1)&&!z[k].at(-1).hidden?api.image(z[k].at(-1).id):'')+'</button>';
  return '<section class="online-player '+(opponent?'opponent':'own')+'"><h3><span>'+esc(room.names[who])+(!watching&&who===p?' · YOU':'')+(s.active===who?' · ACTIVE TURN':'')+'</span><span>Level '+z.level.length+' · Clock '+z.clock.length+'</span></h3><div class="online-left">'+['deck','waiting','stock','clock','level','memory'].map(pile).join('')+'</div><div class="online-center"><div class="online-stage-row">'+(opponent?back:front).map(stageZone).join('')+'</div><div class="online-stage-row">'+(opponent?front:back).map(stageZone).join('')+'</div><div class="online-hand"><small>HAND · '+z.hand.length+'</small>'+z.hand.map(c=>'<div>'+card(c,{p:who,z:'hand',uid:c.uid})+'</div>').join('')+'<button data-online-pile="'+who+'|hand">Inspect hand</button></div></div><div class="online-right">'+['climax','resolution'].map(pile).join('')+'</div></section>';}
  if(watching)$('#online-leave').onclick=stopWatching;else{ $('#online-next').onclick=()=>act('advance');$('#online-leave').onclick=()=>command('leave');$('#online-undo').onclick=()=>command('undo-request');$('#online-concede').onclick=()=>{show('<h2>Concede this match?</h2><button id="confirm-concede">Concede</button>');$('#confirm-concede').onclick=()=>{$('#dialog').close();act('concede');};};$('#online-effect').onclick=manualWindow;$('#online-pause').onclick=()=>act('pause');$('#online-tools').onclick=()=>manualTools();}$('#online-fullscreen').onclick=toggleFullscreen;
- el.querySelectorAll('[data-online-pile]').forEach(b=>b.onclick=()=>{const [p,z]=b.dataset.onlinePile.split('|');openPile(+p,z);});el.querySelectorAll('[data-online-inspect]').forEach(b=>b.onclick=()=>api.inspect(b.dataset.onlineInspect));el.querySelectorAll('[data-online-ref]').forEach(b=>b.onclick=()=>cardMenu(JSON.parse(b.dataset.onlineRef),b));renderPrompt();renderStatus();
+ el.querySelectorAll('[data-online-pile]').forEach(b=>b.onclick=()=>{const [p,z]=b.dataset.onlinePile.split('|');openPile(+p,z);});el.querySelectorAll('[data-online-inspect]').forEach(b=>b.onclick=()=>api.inspect(b.dataset.onlineInspect));const targets=stageTargetOptions(s.auto.choice);el.querySelectorAll('[data-online-ref]').forEach(b=>{const ref=JSON.parse(b.dataset.onlineRef),target=targets.find(o=>o.ref.uid===ref.uid);b.closest('.online-stage')?.classList.toggle('eligible-ability-target',!!target);b.onclick=()=>target?act('respond',{choice:s.auto.choice.id,value:target.value}):cardMenu(ref,b);});renderPrompt();renderStatus();
  }
  function act(type,args={},onError){return command('act',{type,args},onError);}
  function renderPrompt(){if(!room?.state)return;const s=room.state,p=room.seat,el=$('#online-prompt');abilityPicker(!room.undo&&!s.manualWindow&&!section.hidden?s.auto.choice:null,(value,onError)=>act('respond',{choice:s.auto.choice.id,value},onError),room.id);if(s.auto.gameOver){el.innerHTML='<h2>Match ended</h2><p>'+esc(s.auto.gameOver.reason)+'</p>';return;}if(room.undo){el.innerHTML='<p>Player '+(room.undo.by+1)+' requests an undo. '+(room.undo.revealed?'Cards or random information have been revealed. Both players will still know what they saw.':'')+'</p>'+(room.undo.by!==p?'<button id="undo-yes">Agree</button><button id="undo-no">Decline</button>':'Waiting for your opponent’s agreement.');if($('#undo-yes')){$('#undo-yes').onclick=()=>command('undo-answer',{accept:true});$('#undo-no').onclick=()=>command('undo-answer',{accept:false});}return;}if(s.setup){
@@ -245,7 +245,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
      }
     }
     if(current&&s.phase===3)actions.push(['Change stage position',()=>chooseStage(to=>act('reposition',{ref,to}))]);
-    if(s.stats[c.uid])actions.push(['Soul / power breakdown',()=>show('<h2>Current stats</h2><pre>'+esc(JSON.stringify(s.stats[c.uid],null,2))+'</pre>')]);
+    if(s.stats[c.uid])actions.push(['Soul / power breakdown',()=>show(modifierBreakdown(s.stats[c.uid],s.turn))]);
    }
    if(manualAllowed){
     const run=(action,options={})=>runCardEffect(ref,action,options);
@@ -291,8 +291,9 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
   const canActivate=current&&s.phase===3&&stage.includes(ref.z);
   show('<h2>Activate ability</h2><p>Choose an ACT ability. Automatic actions pay the printed cost and ask for targets when needed.</p><p id="online-ability-status" role="status"></p>'+abilities.map(({text,action},i)=>{
    const auto=action||backup&&parseAbility(text)?.kind==='backup';
-   const unavailable=action&&!canActivate;
-   return '<p>'+esc(text)+'</p><button data-online-ability="'+i+'" '+(unavailable?'disabled':'')+'>'+(unavailable?'Use during your Main phase after pending effects finish':auto?'Activate':'Resolve manually')+'</button>';
+   const reason=action?(s.activation?.[ref.uid]?.[i]||(!canActivate?'Use during your Main phase after pending effects finish.':'')):'';
+   const unavailable=!!reason;
+   return '<p>'+esc(text)+'</p><button data-online-ability="'+i+'" '+(unavailable?'disabled':'')+'>'+(unavailable?'Unavailable':auto?'Activate':'Resolve manually')+'</button>'+(reason?'<p class="muted">'+esc(reason)+'</p>':'');
   }).join(''));
   document.querySelectorAll('[data-online-ability]').forEach(button=>button.onclick=async()=>{
    const selected=abilities[+button.dataset.onlineAbility];
