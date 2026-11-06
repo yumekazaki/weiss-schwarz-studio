@@ -18,11 +18,16 @@ export function mountAbilityPicker(parent,api){
   dialog.innerHTML='<h2>'+esc(choice.title)+'</h2><div class="ability-picker-grid">'+choice.options.filter(o=>o.card).map((o,i)=>
    '<button type="button" data-picker-card="'+i+'" '+(o.disabled?'disabled':'')+'>'+api.image(o.card)+'<span>'+esc(o.label)+'</span></button>').join('')+'</div><div class="toolbar">'+
    choice.options.filter(o=>!o.card).map((o,i)=>'<button type="button" data-picker-other="'+i+'">'+esc(o.label)+'</button>').join('')+
-   '<button type="button" data-picker-board>Review board</button></div>';
+   '<button type="button" data-picker-board>Review board</button></div><p data-picker-status role="status"></p>';
   for(const [selector,options] of [['data-picker-card',choice.options.filter(o=>o.card)],['data-picker-other',choice.options.filter(o=>!o.card)]]){
-   dialog.querySelectorAll('['+selector+']').forEach(button=>button.onclick=()=>{
-    dialog.close();
-    respond(options[+button.getAttribute(selector)].value);
+   dialog.querySelectorAll('['+selector+']').forEach(button=>button.onclick=async()=>{
+    const status=dialog.querySelector('[data-picker-status]');
+    button.disabled=true;
+    status.textContent='Resolving…';
+    status.classList.remove('bad');
+    const accepted=await respond(options[+button.getAttribute(selector)].value,message=>{status.textContent=message;status.classList.add('bad');});
+    if(accepted!==false&&status.isConnected&&dialog.open)dialog.close();
+    else if(button.isConnected)button.disabled=false;
    });
   }
   dialog.querySelector('[data-picker-board]').onclick=()=>dialog.close();
@@ -42,7 +47,7 @@ export function mountResolution(api){
   let started=false;function ready(){if(started)return;started=true;window.clearTimeout(loadTimer);revealTimer=window.setTimeout(finish,api.revealMs??700);}const img=revealPanel.querySelector('img');if(!img||img.complete)ready();else{img.addEventListener('load',ready,{once:true});img.addEventListener('error',ready,{once:true});loadTimer=window.setTimeout(ready,api.revealLoadMs??1800);}
  }
  function render(){const s=api.state();if(!s){clearFlash();picker(null);return;}if(api.ready&&!api.ready()){panel.innerHTML='<p>Loading match cards…</p>';return;}const a=api.resolver.auto(s),c=a.choice,attack=a.attack,stats=attack?api.resolver.stats(s,attack.ref):null;
-  picker(document.body.dataset.view==='practice'&&(!s.practiceBot||c?.p!==1)?c:null,value=>api.commit('Resolve card choice',()=>api.resolver.respond(s,c.id,value)),s.deckNames?.join('|')||'practice');
+  picker(document.body.dataset.view==='practice'&&(!s.practiceBot||c?.p!==1)?c:null,(value,onError)=>api.commit('Resolve card choice',()=>api.resolver.respond(s,c.id,value),onError),s.deckNames?.join('|')||'practice');
   panel.innerHTML='<div class="resolution-header"><b>✦ '+esc(a.gameOver?'Game ended':c?.title||a.reveal?.label||(s.phase===5?s.step:['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase]+' phase')||'Core game procedures')+'</b><label><input id="auto-enabled" type="checkbox" '+(a.enabled?'checked':'')+'> Guided resolution</label><button id="core-rules">Check core rules</button><button id="pause-resolution">'+(a.paused?'Resume':'Pause')+'</button><button id="effect-tools">Effects & corrections</button><a class="support-link" href="automation-support.html" target="_blank" rel="noopener">Ability support ↗</a></div>'+(a.gameOver?'<p class="bad">Player '+a.gameOver.players.map(p=>p+1).join(' & ')+' loses · '+esc(a.gameOver.reason)+'</p>':'')+(stats?'<div class="attack-soul"><b>'+esc(attack.type.toUpperCase())+' · Soul '+stats.soul+'</b><button id="soul-breakdown">Soul & power breakdown'+(stats.unsupported.length?' · review abilities':'')+'</button></div>':'')+(c?(s.practiceBot&&c.p===1&&['ability-look-target','ability-look-order','ability-look-place','ability-search','ability-pay-card','ability-hand-move','ability-resonate','discard','act-target'].includes(c.kind)?'<p>Practice bot is choosing a card.</p>':choiceHTML(c)):'<p class="resolution-idle">'+(a.enabled?'Routine checks resolve automatically. Only available responses and card choices pause play.':'Manual mode. Existing controls remain available; turn guided resolution on to automate core procedures.')+'</p>')+(a.results[0]?'<details><summary>Last damage: '+esc(a.results[0].label)+' · '+(a.results[0].canceled?'canceled':a.results[0].n+' to clock')+'</summary><p>Revealed '+a.results[0].uids.length+' card(s). This outcome applies only to that damage instance.</p></details>':'');
   if(a.notice&&(!s.practiceBot||a.notice.p!==1))panel.insertAdjacentHTML('beforeend','<p class="ability-prompt-text" role="status">'+esc(a.notice.message)+'</p>');
   panel.insertAdjacentHTML('beforeend','<details><summary>Action log</summary><div class="resolution-log">'+s.log.filter(t=>!t.includes('Resolution choice: Pending abilities resolved / none pending')).slice(0,20).map(t=>'<p>'+esc(t)+'</p>').join('')+'</div></details>');
@@ -51,7 +56,8 @@ export function mountResolution(api){
   $('#auto-enabled').onchange=e=>api.commit('Changed guided resolution',()=>{if(a.choice||a.reveal||a.attack||a.queue.length)throw Error('Finish the pending resolution or use the explicit abort override.');a.enabled=e.target.checked;});
   $('#core-rules').onclick=()=>api.commit('Check core procedures',()=>api.resolver.run(s));$('#effect-tools').onclick=effectsDialog;
   if($('#soul-breakdown'))$('#soul-breakdown').onclick=()=>breakdown(attack.ref);
-  panel.querySelectorAll('[data-response]').forEach(b=>b.onclick=()=>{const extras={};if($('#battle-atk')){extras.attacker=+$('#battle-atk').value;extras.defender=+$('#battle-def').value;}api.commit('Resolution choice: '+b.textContent,()=>api.resolver.respond(s,c.id,b.dataset.response,extras));});
+  if(c)panel.insertAdjacentHTML('beforeend','<p id="practice-choice-status" role="status"></p>');
+  panel.querySelectorAll('[data-response]').forEach(b=>b.onclick=()=>{const extras={};if($('#battle-atk')){extras.attacker=+$('#battle-atk').value;extras.defender=+$('#battle-def').value;}api.commit('Resolution choice: '+b.textContent,()=>api.resolver.respond(s,c.id,b.dataset.response,extras),message=>{const status=$('#practice-choice-status');status.textContent=message;status.classList.add('bad');});});
   panel.querySelectorAll('[data-choice-inspect]').forEach(b=>b.onclick=()=>api.inspect(b.dataset.choiceInspect));
   for(const id of ['next-phase-middle','advance','previous-phase'])if($('#'+id))$('#'+id).disabled=!!(a.choice||a.reveal||a.paused||a.attack||a.queue.length||a.gameOver);
   document.querySelectorAll('.auto-soul').forEach(b=>b.onclick=e=>{e.stopPropagation();const [p,z,uid]=b.dataset.soul.split('|');breakdown({p:+p,z,uid});});

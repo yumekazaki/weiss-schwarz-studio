@@ -209,7 +209,7 @@ function schedulePracticeBot(){
   if(next)commit(next.label,next.run);
  },500);
 }
-function commit(label,fn){if(!match)return toast('Start a match first.');const before=structuredClone(match);try{fn();if(resolver.auto(match).enabled)resolver.afterMutation(match,before);if(before.auto?.choice&&!match.auto?.choice&&!match.auto?.attack)$('#control-player').value=String(match.active);history.push(before);if(history.length>100)history.shift();future=[];match.log.unshift(`T${match.turn} · ${label}`);match.log=match.log.slice(0,150);persist('ws-match',match);selected=selected.filter(r=>match.players[r.p].zones[r.z]?.some(c=>c.uid===r.uid));renderMatch();if(pile)renderPile();}catch(e){match=before;toast(e.message);}}
+function commit(label,fn,onError=toast){if(!match){onError('Start a match first.');return false;}const before=structuredClone(match);try{fn();if(resolver.auto(match).enabled)resolver.afterMutation(match,before);if(before.auto?.choice&&!match.auto?.choice&&!match.auto?.attack)$('#control-player').value=String(match.active);history.push(before);if(history.length>100)history.shift();future=[];match.log.unshift(`T${match.turn} · ${label}`);match.log=match.log.slice(0,150);persist('ws-match',match);selected=selected.filter(r=>match.players[r.p].zones[r.z]?.some(c=>c.uid===r.uid));renderMatch();if(pile)renderPile();return true;}catch(e){match=before;onError(e.message);return false;}}
 function undo(){if(!history.length)return;future.push(structuredClone(match));match=history.pop();selected=[];persist('ws-match',match);renderMatch();if(pile)renderPile();}$('#undo').onclick=undo;$('#redo').onclick=()=>{if(!future.length)return;history.push(structuredClone(match));match=future.pop();selected=[];persist('ws-match',match);renderMatch();};
 function ref(p,z,c){return {p,z,uid:c.uid};}const isSelected=(p,z,c)=>selected.some(r=>r.p===p&&r.z===z&&r.uid===c.uid);
 function toggle(p,z,uid){const i=selected.findIndex(r=>r.p===p&&r.z===z&&r.uid===uid);if(i<0)selected.push({p,z,uid});else selected.splice(i,1);renderMatch();if(pile)renderPile();}
@@ -320,22 +320,25 @@ function openAbilities(ref,manual){
   return;
  }
  const backup=choice?.kind==='counter'&&choice.p===ref.p&&choice.options.find(o=>o.value===ref.uid&&o.backup);
- showDialog('<h2>Activate ability</h2><p>Choose an ACT ability. Automatic actions pay the printed cost and ask for targets when needed.</p>'+abilities.map(({text,action},i)=>{
+ showDialog('<h2>Activate ability</h2><p>Choose an ACT ability. Automatic actions pay the printed cost and ask for targets when needed.</p><p id="practice-ability-status" role="status"></p>'+abilities.map(({text,action},i)=>{
   const available=action||backup&&parseAbility(text)?.kind==='backup';
   return '<p>'+esc(text)+'</p><button type="button" data-practice-ability="'+i+'">'+(available?'Activate':'Resolve manually')+'</button>';
  }).join(''));
  $('[data-practice-ability]').forEach(button=>button.onclick=()=>{
   const selected=abilities[+button.dataset.practiceAbility];
-  if(match.practiceBot&&ref.p===1)return toast('The Practice bot controls that character.');
+  const status=$('#practice-ability-status');
+  const report=message=>{status.textContent=message;status.classList.add('bad');};
+  if(match.practiceBot&&ref.p===1)return report('The Practice bot controls that character.');
   if(!selected.action&&!(backup&&parseAbility(selected.text)?.kind==='backup'))return manual();
-  $('#dialog').close();pile=null;
-  commit('Activate ability',()=>selected.action?resolver.activate(match,ref,selected.index):resolver.respond(match,choice.id,backup.value));
+  pile=null;
+  const accepted=commit('Activate ability',()=>selected.action?resolver.activate(match,ref,selected.index):resolver.respond(match,choice.id,backup.value),report);
+  if(accepted)$('#dialog').close();
  });
 }
 function selectCards(refs,player){selected=refs;if(player!==undefined){$('#control-player').value=String(player);$('#dest-player').value=String(player);}renderMatch();if(pile)renderPile();}
 function performMove(refs,p,to,position='top',orientation){commit('Manual movement to '+zoneName(to),()=>{const moved=move(match,refs,p,to,position);if(orientation)moved.forEach(c=>c.orientation=orientation);selected=[];});}
 design=mountAtelier({state:()=>({cards,catalog,match,selected,player:cp(),pile}),view,toast,card:id=>catalog.get(id),name:id=>catalog.has(id)?displayName(catalog.get(id)):'Card unavailable',englishAbility:id=>{const p=presentation?.get(id);return p?.kind==='official'||catalog.get(id)?.language==='EN'?p?.ability?.join(' ')||'':'';},instance:instanceAt,readable:r=>{const c=instanceAt(r);return !!c&&(visible(r.p,r.z,c)||(pile?.peek||pile?.looked?.includes(r.uid))&&pile.p===r.p&&pile.z===r.z&&(!c.faceDown||['deck','stock','hand'].includes(r.z)));},image:id=>img(catalog.get(id)),details:readableDetails,inspect,zoneName,openPile,select:selectCards,setPlayer:p=>{$('#control-player').value=String(p);renderMatch();},setAmount:n=>$('#amount').value=String(n),action:name=>commit('Player '+(cp()+1)+': '+name,()=>actions[name]()),move:performMove,advancePhase,previousPhase,setStep:step=>commit('Attack step: '+step,()=>match.step=step),swapStage:(r,to)=>commit('Stage position swap',()=>{const z=match.players[r.p].zones;[z[r.z],z[to]]=[z[to],z[r.z]];[z['markers:'+r.z],z['markers:'+to]]=[z['markers:'+to],z['markers:'+r.z]];selected=[];}),placeStage:(r,to,rested)=>commit('Place character on '+zoneName(to),()=>{const z=match.players[r.p].zones;const old=z[to].map(c=>({p:r.p,z:to,uid:c.uid}));if(old.length)move(match,old,r.p,'waiting');if(z['markers:'+to].length)z.waiting.push(...z['markers:'+to].splice(0));move(match,[r],r.p,to);if(rested)z[to].at(-1).orientation='rest';selected=[];}),openAbilities,playCard:playPracticeCard,declareAttack:(r,type,override=false)=>commit((override?'Manual override: ':'')+type+' attack',()=>{if(!override&&resolver.auto(match).enabled)return resolver.beginAttack(match,r,type);if(resolver.auto(match).choice||resolver.auto(match).attack)throw Error('Finish or abort the pending guided sequence first.');const c=instanceAt(r);if(!c)throw Error('Choose a stage character.');c.orientation='rest';match.attackType=type[0].toUpperCase()+type.slice(1);match.attacksThisTurn=(match.attacksThisTurn||0)+1;match.step='Attack declaration';})});
-resolutionUI=mountResolution({state:()=>match,ready:()=>match?.practiceBot?matchCardsReady():catalogReady,resolver,commit,dialog:showDialog,inspect,image:id=>img(catalog.get(id)),name:id=>displayName(catalog.get(id))});
+resolutionUI=mountResolution({state:()=>match,ready:matchCardsReady,resolver,commit,dialog:showDialog,inspect,image:id=>img(catalog.get(id)),name:id=>displayName(catalog.get(id))});
 $('#browse-builder-cards').onclick=()=>{$('#search').focus();$('#search').scrollIntoView?.({block:'center',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
 
 async function loadStarterDecks(){

@@ -30,7 +30,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  async function call(op,args={}){const {data:{session}}=await client.auth.getSession();if(!session)throw Error('Sign in to use online play.');const response=await fetch(config.url+'/functions/v1/ws-online',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,apikey:config.key,'Content-Type':'application/json'},body:JSON.stringify({op,...args})});const b=await response.json();if(!response.ok||b.error)throw Error(b.error||'Online service unavailable.');return b;}
  function show(html){api.dialog(html);}
  function stamp(){return {room:room.id,version:room.version,actionId:crypto.randomUUID()};}
- async function command(op,args={}){if(busy)return;busy=true;$('#online-content')?.setAttribute('aria-busy','true');try{const next=await call(op,{...stamp(),...args});if(next.left){closeMulligan();localStorage.removeItem('ws-online-room');room=null;lastVersion=-1;api.view('home');return;}accept(next);return true;}catch(e){api.toast(e.message);await poll();return false;}finally{busy=false;$('#online-content')?.removeAttribute('aria-busy');}}
+ async function command(op,args={},onError=api.toast){if(busy){onError('Wait for the current action to finish.');return false;}busy=true;$('#online-content')?.setAttribute('aria-busy','true');try{const next=await call(op,{...stamp(),...args});if(next.left){closeMulligan();localStorage.removeItem('ws-online-room');room=null;lastVersion=-1;api.view('home');return;}accept(next);return true;}catch(e){onError(e.message);await poll();return false;}finally{busy=false;$('#online-content')?.removeAttribute('aria-busy');}}
  function accept(next){if(!next.id)return;const previous=room;room=next;if(next.seat!==-1)localStorage.setItem('ws-online-room',next.id);if(next.version!==lastVersion){lastVersion=next.version;if(previous?.id!==next.id||!mulliganPending(previous)||!mulliganPending(next))selections=[];render();}else renderStatus();}
  function mulliganPending(snapshot){
   const setup=snapshot?.state?.setup,p=snapshot?.seat;
@@ -152,8 +152,8 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  if(watching)$('#online-leave').onclick=stopWatching;else{ $('#online-next').onclick=()=>act('advance');$('#online-leave').onclick=()=>command('leave');$('#online-undo').onclick=()=>command('undo-request');$('#online-concede').onclick=()=>{show('<h2>Concede this match?</h2><button id="confirm-concede">Concede</button>');$('#confirm-concede').onclick=()=>{$('#dialog').close();act('concede');};};$('#online-effect').onclick=manualWindow;$('#online-pause').onclick=()=>act('pause');$('#online-tools').onclick=()=>manualTools();}$('#online-fullscreen').onclick=toggleFullscreen;
  el.querySelectorAll('[data-online-pile]').forEach(b=>b.onclick=()=>{const [p,z]=b.dataset.onlinePile.split('|');openPile(+p,z);});el.querySelectorAll('[data-online-inspect]').forEach(b=>b.onclick=()=>api.inspect(b.dataset.onlineInspect));el.querySelectorAll('[data-online-ref]').forEach(b=>b.onclick=()=>cardMenu(JSON.parse(b.dataset.onlineRef),b));renderPrompt();renderStatus();
  }
- function act(type,args={}){return command('act',{type,args});}
- function renderPrompt(){if(!room?.state)return;const s=room.state,p=room.seat,el=$('#online-prompt');abilityPicker(!room.undo&&!s.manualWindow&&!section.hidden?s.auto.choice:null,value=>act('respond',{choice:s.auto.choice.id,value}),room.id);if(s.auto.gameOver){el.innerHTML='<h2>Match ended</h2><p>'+esc(s.auto.gameOver.reason)+'</p>';return;}if(room.undo){el.innerHTML='<p>Player '+(room.undo.by+1)+' requests an undo. '+(room.undo.revealed?'Cards or random information have been revealed. Both players will still know what they saw.':'')+'</p>'+(room.undo.by!==p?'<button id="undo-yes">Agree</button><button id="undo-no">Decline</button>':'Waiting for your opponent’s agreement.');if($('#undo-yes')){$('#undo-yes').onclick=()=>command('undo-answer',{accept:true});$('#undo-no').onclick=()=>command('undo-answer',{accept:false});}return;}if(s.setup){
+ function act(type,args={},onError){return command('act',{type,args},onError);}
+ function renderPrompt(){if(!room?.state)return;const s=room.state,p=room.seat,el=$('#online-prompt');abilityPicker(!room.undo&&!s.manualWindow&&!section.hidden?s.auto.choice:null,(value,onError)=>act('respond',{choice:s.auto.choice.id,value},onError),room.id);if(s.auto.gameOver){el.innerHTML='<h2>Match ended</h2><p>'+esc(s.auto.gameOver.reason)+'</p>';return;}if(room.undo){el.innerHTML='<p>Player '+(room.undo.by+1)+' requests an undo. '+(room.undo.revealed?'Cards or random information have been revealed. Both players will still know what they saw.':'')+'</p>'+(room.undo.by!==p?'<button id="undo-yes">Agree</button><button id="undo-no">Decline</button>':'Waiting for your opponent’s agreement.');if($('#undo-yes')){$('#undo-yes').onclick=()=>command('undo-answer',{accept:true});$('#undo-no').onclick=()=>command('undo-answer',{accept:false});}return;}if(s.setup){
  const setup=s.setup;
  if(setup.stage==='roll'||setup.stage==='choose-first'){
   const rolls=setup.rolls.map((value,i)=>esc(room.names[i])+': '+(value??'—')).join(' · ');
@@ -171,7 +171,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  if($('#reopen-mulligan'))$('#reopen-mulligan').onclick=()=>{mulliganMinimized=false;renderMulligan();};
  renderMulligan();
  return;
-}const c=s.auto.choice;if(s.manualWindow&&!(c&&['level','level-order','rule-order'].includes(c.kind))){el.innerHTML='<p>Manual effect · '+esc(s.manualWindow.reason)+' · '+esc(room.names[s.manualWindow.p])+' must resolve it.</p>'+(s.manualWindow.p===p?'<button id="manual-open">Open manual controls</button><button id="manual-done">Finish effect</button>':'');if($('#manual-open')){$('#manual-open').onclick=manualTools;$('#manual-done').onclick=()=>act('effect-done');}return;}if(c){el.innerHTML='<h3>'+esc(c.title)+'</h3>'+(c.abilityText?'<p class="ability-prompt-text">'+esc(c.abilityText)+'</p>':'')+(c.kind==='auto-manual'?'<button id="open-trigger-manual">Open manual controls</button>':'')+'<div class="online-choices">'+c.options.map((o,i)=>'<button data-answer="'+i+'" '+(o.disabled?'disabled':'')+'>'+(o.card?api.image(o.card):'')+esc(o.label)+'</button>').join('')+'</div>';if($('#open-trigger-manual'))$('#open-trigger-manual').onclick=manualTools;el.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>act('respond',{choice:c.id,value:c.options[+b.dataset.answer].value}));}else el.innerHTML=s.auto.notice?'<p class="ability-prompt-text" role="status">'+esc(s.auto.notice)+'</p>':s.choiceOwner!==null?'<p>Waiting for '+esc(room.names[s.choiceOwner])+' to make a choice.</p>':'';}
+}const c=s.auto.choice;if(s.manualWindow&&!(c&&['level','level-order','rule-order'].includes(c.kind))){el.innerHTML='<p>Manual effect · '+esc(s.manualWindow.reason)+' · '+esc(room.names[s.manualWindow.p])+' must resolve it.</p>'+(s.manualWindow.p===p?'<button id="manual-open">Open manual controls</button><button id="manual-done">Finish effect</button>':'');if($('#manual-open')){$('#manual-open').onclick=manualTools;$('#manual-done').onclick=()=>act('effect-done');}return;}if(c){el.innerHTML='<h3>'+esc(c.title)+'</h3>'+(c.abilityText?'<p class="ability-prompt-text">'+esc(c.abilityText)+'</p>':'')+(c.kind==='auto-manual'?'<button id="open-trigger-manual">Open manual controls</button>':'')+'<div class="online-choices">'+c.options.map((o,i)=>'<button data-answer="'+i+'" '+(o.disabled?'disabled':'')+'>'+(o.card?api.image(o.card):'')+esc(o.label)+'</button>').join('')+'</div>';if($('#open-trigger-manual'))$('#open-trigger-manual').onclick=manualTools;el.insertAdjacentHTML('beforeend','<p id="online-choice-status" role="status"></p>');el.querySelectorAll('[data-answer]').forEach(b=>b.onclick=async()=>{const status=$('#online-choice-status');status.textContent='Resolving…';b.disabled=true;const ok=await act('respond',{choice:c.id,value:c.options[+b.dataset.answer].value},message=>{status.textContent=message;status.classList.add('bad');});if(!ok&&b.isConnected)b.disabled=false;});}else el.innerHTML=s.auto.notice?'<p class="ability-prompt-text" role="status">'+esc(s.auto.notice)+'</p>':s.choiceOwner!==null?'<p>Waiting for '+esc(room.names[s.choiceOwner])+' to make a choice.</p>':'';}
 
  let cardActions=null,cardAnchor=null;
  function closeCardActions(){cardActions?.remove();cardActions=null;cardAnchor=null;}
@@ -289,18 +289,27 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
   const s=room.state,choice=s.auto.choice;
   const backup=choice?.kind==='counter'&&choice.options.find(o=>o.value===ref.uid&&o.backup);
   const canActivate=current&&s.phase===3&&stage.includes(ref.z);
-  show('<h2>Activate ability</h2><p>Choose an ACT ability. Automatic actions pay the printed cost and ask for targets when needed.</p>'+abilities.map(({text,action},i)=>{
+  show('<h2>Activate ability</h2><p>Choose an ACT ability. Automatic actions pay the printed cost and ask for targets when needed.</p><p id="online-ability-status" role="status"></p>'+abilities.map(({text,action},i)=>{
    const auto=action||backup&&parseAbility(text)?.kind==='backup';
    const unavailable=action&&!canActivate;
    return '<p>'+esc(text)+'</p><button data-online-ability="'+i+'" '+(unavailable?'disabled':'')+'>'+(unavailable?'Use during your Main phase after pending effects finish':auto?'Activate':'Resolve manually')+'</button>';
   }).join(''));
-  document.querySelectorAll('[data-online-ability]').forEach(button=>button.onclick=()=>{
+  document.querySelectorAll('[data-online-ability]').forEach(button=>button.onclick=async()=>{
    const selected=abilities[+button.dataset.onlineAbility];
-   $('#dialog').close();
-   if(selected.action)return act('activate',{ref,index:selected.index});
-   if(backup&&parseAbility(selected.text)?.kind==='backup')return act('respond',{choice:choice.id,value:backup.value});
-   const reason=(card.code+' · '+selected.text).slice(0,400);
-   return act('effect-request',{player:room.seat,reason});
+   const status=$('#online-ability-status');
+   const report=message=>{status.textContent=message;status.classList.add('bad');};
+   status.textContent='Checking ability…';
+   status.classList.remove('bad');
+   button.disabled=true;
+   let accepted;
+   if(selected.action)accepted=await act('activate',{ref,index:selected.index},report);
+   else if(backup&&parseAbility(selected.text)?.kind==='backup')accepted=await act('respond',{choice:choice.id,value:backup.value},report);
+   else{
+    const reason=(card.code+' · '+selected.text).slice(0,400);
+    accepted=await act('effect-request',{player:room.seat,reason},report);
+   }
+   if(accepted&&status.isConnected&&$('#dialog').open)$('#dialog').close();
+   else if(button.isConnected)button.disabled=false;
   });
  }
  function chooseStage(fn,positions=stage){show('<h2>Choose a stage position</h2>'+(positions.length?positions.map((z,i)=>'<button data-stage-choice="'+i+'">'+esc(api.zoneName(z))+'</button>').join(''):'<p>There are no open stage positions. Move a character off the stage first.</p>'));document.querySelectorAll('[data-stage-choice]').forEach(b=>b.onclick=()=>{$('#dialog').close();fn(positions[+b.dataset.stageChoice]);});}

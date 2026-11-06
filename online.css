@@ -158,6 +158,8 @@
 .ability-picker-grid button { display: grid; align-content: start; gap: 5px; padding: 5px; min-width: 0; }
 .ability-picker-grid img { display: block; height: 120px; width: 100%; object-fit: contain; }
 .ability-picker-grid span { font-size: .8rem; overflow-wrap: anywhere; }
+body.table-focus #toast { z-index: 1200; }
+body:has(#online.online-fullscreen) #toast { z-index: 1200; }
 @media (max-width: 480px) {
   .mulligan-hand { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
