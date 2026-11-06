@@ -1,3 +1,4 @@
+import {noSideAttack} from './engine.mjs';
 export const stagePositions=['center-left','center-middle','center-right','back-left','back-right'];
 export const facingPosition=z=>({'center-left':'center-right','center-middle':'center-middle','center-right':'center-left'})[z];
 export const cardMoveOptions=[
@@ -31,7 +32,7 @@ export function cardContext({match,ref,card,englishAbility=''}){
   const instance=player.zones[ref.z].find(c=>c.uid===ref.uid);
   if(ownTurn&&phase===5&&ref.z.startsWith('center-')&&instance?.orientation==='stand'&&match.step==='Attack declaration'){
    if(match.turn===1&&(match.attacksThisTurn||0)>=1)add('first-turn-limit','First turn: one attack already declared',{disabled:true});
-   else{const opponent=match.players[1-ref.p].zones[facingPosition(ref.z)];if(!opponent?.length)add('attack-direct','Direct attack',{hint:'No opposing character. Apply +1 soul manually.'});else{add('attack-frontal','Frontal attack');add('attack-side','Side attack',{hint:'Apply the opposing character’s level as the soul reduction manually.'});}}
+   else{const opponent=match.players[1-ref.p].zones[facingPosition(ref.z)];if(!opponent?.length)add('attack-direct','Direct attack',{hint:'No opposing character. Apply +1 soul manually.'});else{add('attack-frontal','Frontal attack');if(!(card?.ability||[]).flatMap(text=>text.split('\n')).some(noSideAttack))add('attack-side','Side attack',{hint:'Apply the opposing character’s level as the soul reduction manually.'});}}
   }
   if(ownTurn&&phase===3)add('swap-stage','Move / swap stage position…');
   if(instance?.orientation!=='rest')add('rest','Rest character');

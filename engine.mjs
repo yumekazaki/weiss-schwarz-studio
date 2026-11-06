@@ -1,12 +1,21 @@
 export const zones=['deck','hand','waiting','stock','clock','level','memory','climax','resolution','center-left','center-middle','center-right','back-left','back-right',...['center-left','center-middle','center-right','back-left','back-right'].map(x=>'markers:'+x)];
 export const phases=['Stand','Draw','Clock','Main','Climax','Attack','End'];
 export const stage=z=>/^(center|back)-/.test(z);
+export const noSideAttack=text=>/^(?:【CONT】 This card cannot side attack\.|【永】 このカードはサイドアタックできない。)$/i.test(text.trim());
+export function handLevelRule(text){
+ const en=text.match(/^【CONT】 If your waiting room has (\d+) or less climax(?:es)?, this card gets -(\d+) level while in your hand\.$/i);
+ const jp=text.match(/^【永】 あなたの控え室のクライマックスが(\d+)枚以下なら、あなたの手札のこのカードのレベルを[－−-](\d+)。$/);
+ const match=en||jp;
+ return match?{maximum:+match[1],reduction:+match[2]}:null;
+}
 export function playFromHandError(card,zones,phase,get){
  if(!card)return 'Card data is unavailable.';
  const climax=card.type==='Climax';
  if(climax?phase!==4:phase!==3)return climax?'Play climaxes during your Climax phase.':'Play characters and events during your Main phase.';
  if(climax&&zones.climax.length)return 'You can play only one climax.';
- const level=climax?0:Number(card.level);
+ const climaxCount=zones.waiting.filter(c=>get(c.id)?.type==='Climax').length;
+ const reduction=(card.ability||[]).flatMap(text=>text.split(/\r?\n/)).map(text=>handLevelRule(text.trim())).reduce((sum,rule)=>sum+(rule&&climaxCount<=rule.maximum?rule.reduction:0),0);
+ const level=climax?0:Math.max(0,Number(card.level)-reduction);
  const cost=climax?0:Number(card.cost)||0;
  if(!Number.isFinite(level)||level>zones.level.length)return 'Card level is too high.';
  if((climax||level>0)&&![...zones.clock,...zones.level].some(c=>get(c.id)?.color===card.color))return 'You need a matching color in your Clock or Level.';

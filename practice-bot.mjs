@@ -1,4 +1,4 @@
-import {draw, move} from './engine.mjs';
+import {draw, move, noSideAttack, playFromHandError} from './engine.mjs';
 import {facingPosition, stagePositions} from './context-actions.mjs';
 
 const bot = 1;
@@ -83,9 +83,7 @@ export function nextPracticeBotAction(match, catalog, resolver) {
     const slot = stagePositions.find(z => !zones[z].length);
     const playable = zones.hand.filter(card => {
       const data = definition(card);
-      const level = Number(data?.level);
-      return data?.type === 'Character' && level <= zones.level.length &&
-        (!level || colors.has(data.color)) && (Number(data.cost) || 0) <= zones.stock.length;
+      return data?.type === 'Character' && !playFromHandError(data, zones, match.phase, id => catalog.get(id));
     });
     const card = playable.sort((a, b) => Number(definition(b).power) - Number(definition(a).power))[0];
     if (slot && card && !(match.turn === 1 && stagePositions.some(z => zones[z].length))) {
@@ -111,7 +109,7 @@ export function nextPracticeBotAction(match, catalog, resolver) {
       if (opposing) {
         const own = resolver.stats(match, attacker);
         const defender = resolver.stats(match, ref(0, opponentZone, opposing));
-        type = own.power < defender.power && own.soul > defender.level ? 'side' : 'frontal';
+        type = !(definition(card)?.ability||[]).flatMap(text=>text.split('\n')).some(noSideAttack) && own.power < defender.power && own.soul > defender.level ? 'side' : 'frontal';
       }
       return action(type + ' attack', () => resolver.beginAttack(match, attacker, type));
     }

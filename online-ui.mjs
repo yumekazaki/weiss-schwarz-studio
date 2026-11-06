@@ -1,7 +1,7 @@
 import {onlineConfig as config} from './online-config.mjs';
-import {phases,zones,playFromHandError} from './engine.mjs';
+import {noSideAttack,phases,zones,playFromHandError} from './engine.mjs';
 import {cardMoveOptions,facingPosition} from './context-actions.mjs';
-import {activatedAbilities,parseAbility} from './automation.mjs';
+import {abilityLines,activatedAbilities,parseAbility} from './automation.mjs';
 import {modifierBreakdown,mountAbilityPicker,stageTargetOptions} from './resolution-ui.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>structuredClone(x),stage=['center-left','center-middle','center-right','back-left','back-right'];
@@ -240,7 +240,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    }
    if(isStage){
     if(current&&s.phase===5&&s.step==='Attack declaration'&&ref.z.startsWith('center')&&c.orientation==='stand'&&!(s.turn===1&&s.attacksThisTurn>=1)){
-     for(const type of (s.players[1-p].zones[facingPosition(ref.z)].length?['frontal','side']:['direct'])){
+     for(const type of (s.players[1-p].zones[facingPosition(ref.z)].length?(abilityLines(info).some(noSideAttack)?['frontal']:['frontal','side']):['direct'])){
       actions.push([type[0].toUpperCase()+type.slice(1)+' attack',()=>act('attack',{ref,attackType:type})]);
      }
     }
