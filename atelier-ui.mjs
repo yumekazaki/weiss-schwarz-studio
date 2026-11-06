@@ -1,4 +1,4 @@
-import {cardContext,stagePositions} from './context-actions.mjs';
+import {cardContext,cardMoveOptions,stagePositions} from './context-actions.mjs';
 
 const $=s=>document.querySelector(s),all=s=>[...document.querySelectorAll(s)],esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const phaseNames=['Stand','Draw','Clock','Main','Climax','Attack','End'];
@@ -156,6 +156,16 @@ export function mountAtelier(api){
   const s=api.state(),instance=api.instance(ref);if(!instance)return;const readable=api.readable(ref),card=readable?api.card(instance.id):null,choices=cardContext({match:s.match,ref,card,englishAbility:card?api.englishAbility(card.id):''}).map(c=>({...c,hint:s.match.auto?.enabled&&c.key.startsWith('attack-')?'Guided attack: calculate soul, resolve triggers, responses and damage.':c.hint,run:()=>runContext(c.key,ref)}));
   choices.push({label:'Inspect / search this zone',run:()=>api.openPile(ref.p,ref.z)});
   if(readable)choices.unshift({label:'⤢ Pin card details',run:()=>api.inspect(instance.id)});
+  const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock'].includes(to));
+  const moveOption=([to,position,label])=>({label,run:()=>api.move([ref],ref.p,to,position)});
+  choices.push(...manualMoves.slice(0,ref.z==='waiting'?2:3).map(moveOption));
+  choices.push({label:'More destinations…',hint:'Manual card effects',run:()=>showSimpleMenu(menu,'Move card',[
+   ...manualMoves.map(moveOption),
+   ...stagePositions.flatMap(z=>[
+    {label:'Place on '+labels[z]+'…',run:()=>api.placeStage(ref,z,false)},
+    moveOption(['markers:'+z,'top','Place as marker under '+labels[z]]),
+   ]),
+  ])});
   choices.push({label:multi?'Leave multi-select':'Add more cards to selection',run:()=>{multi=!multi;$('#multi-select').checked=multi;api.toast(multi?'Multi-select on. Choose cards in the order you want.':'Multi-select off.');}});
   const manualChoices=[{label:'Move to any zone / player…',run:revealManual},...['stand-selected','rest','reverse','flip','reveal','note'].map(key=>({label:({'stand-selected':'Stand','rest':'Rest','reverse':'Reverse','flip':'Flip face','reveal':'Reveal / hide','note':'Power / soul note'})[key],run:()=>api.action(key)})),{label:'Attack declaration override…',run:()=>showSimpleMenu(menu,'Attack override',['direct','frontal','side'].map(type=>({label:type[0].toUpperCase()+type.slice(1)+' attack (manual override)',run:()=>api.declareAttack(ref,type,true)})))},{label:'All costs, damage and effect tools…',run:revealManual}];
   choices.push({label:'Manual overrides…',hint:'Unusual effects, movement, costs and corrections',run:()=>showSimpleMenu(menu,'Manual card overrides',manualChoices)});

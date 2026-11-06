@@ -1,5 +1,19 @@
 export const stagePositions=['center-left','center-middle','center-right','back-left','back-right'];
 export const facingPosition=z=>({'center-left':'center-right','center-middle':'center-middle','center-right':'center-left'})[z];
+export const cardMoveOptions=[
+ ['waiting','top','Move to waiting room'],
+ ['deck','top','Put on top of deck'],
+ ['deck','bottom','Put on bottom of deck'],
+ ['hand','top','Move to hand'],
+ ['stock','top','Put on top of stock'],
+ ['stock','bottom','Put on bottom of stock'],
+ ['clock','top','Put on top of clock'],
+ ['clock','bottom','Put on bottom of clock'],
+ ['level','top','Move to level'],
+ ['memory','top','Move to memory'],
+ ['climax','top','Move to climax area'],
+ ['resolution','top','Move to resolution zone'],
+];
 export function cardContext({match,ref,card,englishAbility=''}){
  const player=match.players[ref.p],ownTurn=match.active===ref.p,phase=match.phase,out=[];
  const add=(key,label,options={})=>out.push({key,label,...options});

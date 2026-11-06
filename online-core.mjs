@@ -3,7 +3,8 @@ import {createResolver,stageKeys} from './automation.mjs';
 const copy=x=>structuredClone(x);
 const need=(ok,msg)=>{if(!ok)throw Error(msg);};
 const knowledge=s=>JSON.stringify(s.players.map(p=>['deck','hand','stock'].map(z=>p.zones[z].map(c=>[c.uid,c.revealed]))));
-export function secureShuffle(a){for(let i=a.length-1;i>0;i--){const range=i+1,limit=Math.floor(4294967296/range)*range;let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=limit);const j=n%range;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randomBelow(range){const limit=Math.floor(4294967296/range)*range;let n;do{n=crypto.getRandomValues(new Uint32Array(1))[0];}while(n>=limit);return n%range;}
+export function secureShuffle(a){for(let i=a.length-1;i>0;i--){const j=randomBelow(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 export function choiceOwner(s){const c=s.auto?.choice;if(!c)return null;if(Number.isInteger(c.p))return c.p;if(Number.isInteger(c.task?.p))return c.task.p;
  if(['icon-order','unknown-icon'].includes(c.kind))return s.auto.attack?.p;
  if(c.kind==='choice-destination')return c.ref?.p;
@@ -12,9 +13,9 @@ export function choiceOwner(s){const c=s.auto?.choice;if(!c)return null;if(Numbe
  throw Error('Unmapped decision owner: '+c.kind);
 }
 export function initialize(decks,catalog){for(const d of decks){const v=validate(d.cards,catalog,d.format,d.language);need(!v.errors.length,v.errors.join('; '));}
- const s=createMatch(decks.map(d=>d.cards));s.active=crypto.getRandomValues(new Uint8Array(1))[0]%2;s.first=s.active;
- for(let p=0;p<2;p++){secureShuffle(s.players[p].zones.deck);draw(s,p,5);}
- s.deckNames=decks.map(d=>d.name);s.setup={done:[false,false],p:s.active};s.onlineEpoch=0;s.events=[];s.auto={queue:[],choice:null,serial:0,effects:[],shots:[],results:[],enabled:true,optionalTop:'ask',reviews:[],reveal:null};return s;
+ const s=createMatch(decks.map(d=>d.cards));
+ for(const player of s.players)secureShuffle(player.zones.deck);
+ s.deckNames=decks.map(d=>d.name);s.setup={stage:'roll',rolls:[null,null],tie:null,p:0};s.onlineEpoch=0;s.events=[];s.auto={queue:[],choice:null,serial:0,effects:[],shots:[],results:[],enabled:true,optionalTop:'ask',reviews:[],reveal:null};return s;
 }
 export function ownedRef(s,p,r){need(r&&r.p===p&&zones.includes(r.z)&&typeof r.uid==='string','You may act only on your own cards.');const c=s.players[p].zones[r.z].find(c=>c.uid===r.uid);need(c,'That card is no longer in the selected zone.');return c;}
 function resolverFor(catalog){return createResolver(catalog);}
@@ -25,11 +26,48 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  const num=(n,max=50)=>{need(Number.isInteger(n)&&n>=1&&n<=max,'Invalid amount.');return n;};
  if(type==='concede'){a.gameOver={players:[p],reason:'Player '+(p+1)+' conceded.'};a.choice=null;a.queue=[];a.reveal=null;event(s,p,type,args,original);return s;}
  need(!a.gameOver,'The match has ended.');
- if(s.setup){need(type==='mulligan'&&p===s.setup.p,'Waiting for Player '+(s.setup.p+1)+' to mulligan.');const rr=args.refs?.length?refs():[];need(rr.every(x=>x.z==='hand'),'Mulligan uses hand cards.');const selected=rr.map(x=>checkOwn(x));for(const c of selected)own.hand.splice(own.hand.indexOf(c),1);draw(s,p,selected.length);own.waiting.push(...selected);secureShuffle(own.deck); // rules: returned cards go to waiting, then shuffled back after replacements
- own.deck.push(...own.waiting.splice(0));secureShuffle(own.deck);s.setup.done[p]=true;if(!s.setup.done[1-p])s.setup.p=1-p;else{delete s.setup;r.advance(s);}s.onlineEpoch++;event(s,p,type,args,original);return s;}
+ if(s.setup){
+  const setup=s.setup;
+  if(setup.stage==='roll'){
+   need(type==='roll-die'&&setup.rolls[p]===null,'Wait for the other die roll.');
+   setup.rolls[p]=1+randomBelow(6);
+   if(setup.rolls[1-p]===null)setup.p=1-p;
+   else if(setup.rolls[0]===setup.rolls[1]){
+    setup.tie=setup.rolls[0];setup.rolls=[null,null];setup.p=0;
+   }else{
+    setup.stage='choose-first';setup.p=setup.rolls[0]>setup.rolls[1]?0:1;
+   }
+  }else if(setup.stage==='choose-first'){
+   need(type==='choose-first'&&p===setup.p&&typeof args.first==='boolean','The higher roller chooses who goes first.');
+   s.first=s.active=args.first?p:1-p;
+   for(let seat=0;seat<2;seat++)draw(s,seat,5);
+   s.setup={...setup,stage:'mulligan',done:[false,false],p:s.active};
+  }else{
+   need(type==='mulligan'&&p===setup.p,'Waiting for Player '+(setup.p+1)+' to mulligan.');
+   const rr=args.refs?.length?refs():[];
+   need(rr.every(x=>x.z==='hand'),'Mulligan uses hand cards.');
+   move(s,rr,p,'waiting');
+   draw(s,p,rr.length);
+   setup.done[p]=true;
+   if(!setup.done[1-p])setup.p=1-p;
+   else{delete s.setup;r.advance(s);}
+  }
+  s.onlineEpoch++;
+  event(s,p,type,args,original);
+  return s;
+ }
  need(!s.undoRequest,'An undo request is awaiting agreement.');
  if(type==='pause'){need(!s.manualWindow,'A manual effect is already open.');s.manualWindow={p,by:p,reason:'Paused for card effects / manual correction',previousPaused:!!a.paused};a.paused=true;event(s,p,type,args,original);return s;}
  const decision=choiceOwner(s),manualChoice=['manual-counter','encore-manual','unknown-icon'].includes(a.choice?.kind),windowOwner=s.manualWindow?.p;
+ if(type==='card-effect'){
+  need(['manual-move','manual-orient','manual-reveal','manual-flip'].includes(args.action),'Invalid card action.');
+  checkOwn(args.ref);
+  if(s.manualWindow || a.choice)return reduce(original,p,args.action,{...args,refs:[args.ref]},catalog);
+  need(!a.reveal&&!a.attack&&!a.queue.length&&!a.paused,'Finish the current resolution or open a manual effect window first.');
+  const opened=reduce(original,p,'effect-request',{player:p,reason:'Manual card action'},catalog);
+  const changed=reduce(opened,p,args.action,{...args,refs:[args.ref]},catalog);
+  return reduce(changed,p,'effect-done',{},catalog);
+ }
  if(type==='effect-request'){need(!s.manualWindow&&!a.reveal,'Finish the existing effect/check first.');need(decision===null||decision===p,'Waiting for the other player.');need(typeof args.reason==='string'&&args.reason.trim().length>=3&&args.reason.length<=400,'Describe the printed effect and who must act.');need(args.player===0||args.player===1,'Choose the affected player.');s.manualWindow={p:args.player,by:p,reason:args.reason,previousPaused:!!a.paused};a.paused=true;event(s,p,type,{...args,refs:[]},original);return s;}
  if(type==='effect-done'){need(windowOwner===p,'Only the player resolving this effect can finish it.');need(!s.cost,'Finish paying the cost first.');a.paused=s.manualWindow.previousPaused;delete s.manualWindow;r.afterMutation(s);event(s,p,type,args,original);return s;}
  const manual=type.startsWith('manual-');
@@ -101,7 +139,7 @@ export function projectSpectator(state, catalog) {
   return {
     players, stats, active:state.active, turn:state.turn, phase:state.phase,
     step:state.step, waitingFor:projected.waitingFor, choiceOwner:projected.choiceOwner,
-    setup:state.setup ? {p:state.setup.p} : null, log:[],
+    setup:state.setup ? {p:state.setup.p,stage:state.setup.stage,rolls:state.setup.rolls,tie:state.setup.tie} : null, log:[],
     auto:{reveal:projected.auto.reveal, gameOver:projected.auto.gameOver}
   };
 }
