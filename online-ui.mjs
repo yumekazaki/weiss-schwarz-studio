@@ -2,6 +2,7 @@ import {onlineConfig as config} from './online-config.mjs';
 import {phases,zones,playFromHandError} from './engine.mjs';
 import {cardMoveOptions,facingPosition} from './context-actions.mjs';
 import {activatedAbilities,parseAbility} from './automation.mjs';
+import {mountAbilityPicker} from './resolution-ui.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>structuredClone(x),stage=['center-left','center-middle','center-right','back-left','back-right'];
 export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supabase/supabase-js@2.81.1?bundle')){
@@ -11,6 +12,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  mulliganDialog.id='opening-hand';
  mulliganDialog.setAttribute('aria-labelledby','opening-hand-title');
  section.append(mulliganDialog);
+ const abilityPicker=mountAbilityPicker(section,api);
  let mulliganRoom=null,mulliganMinimized=false;
  mulliganDialog.addEventListener('cancel',()=>{mulliganMinimized=true;});
  const account=document.createElement('button');account.id='account-button';account.textContent='Account';document.querySelector('header').append(account);
@@ -151,7 +153,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  el.querySelectorAll('[data-online-pile]').forEach(b=>b.onclick=()=>{const [p,z]=b.dataset.onlinePile.split('|');openPile(+p,z);});el.querySelectorAll('[data-online-inspect]').forEach(b=>b.onclick=()=>api.inspect(b.dataset.onlineInspect));el.querySelectorAll('[data-online-ref]').forEach(b=>b.onclick=()=>cardMenu(JSON.parse(b.dataset.onlineRef),b));renderPrompt();renderStatus();
  }
  function act(type,args={}){return command('act',{type,args});}
- function renderPrompt(){if(!room?.state)return;const s=room.state,p=room.seat,el=$('#online-prompt');if(s.auto.gameOver){el.innerHTML='<h2>Match ended</h2><p>'+esc(s.auto.gameOver.reason)+'</p>';return;}if(room.undo){el.innerHTML='<p>Player '+(room.undo.by+1)+' requests an undo. '+(room.undo.revealed?'Cards or random information have been revealed. Both players will still know what they saw.':'')+'</p>'+(room.undo.by!==p?'<button id="undo-yes">Agree</button><button id="undo-no">Decline</button>':'Waiting for your opponent’s agreement.');if($('#undo-yes')){$('#undo-yes').onclick=()=>command('undo-answer',{accept:true});$('#undo-no').onclick=()=>command('undo-answer',{accept:false});}return;}if(s.setup){
+ function renderPrompt(){if(!room?.state)return;const s=room.state,p=room.seat,el=$('#online-prompt');abilityPicker(!room.undo&&!s.manualWindow&&!section.hidden?s.auto.choice:null,value=>act('respond',{choice:s.auto.choice.id,value}),room.id);if(s.auto.gameOver){el.innerHTML='<h2>Match ended</h2><p>'+esc(s.auto.gameOver.reason)+'</p>';return;}if(room.undo){el.innerHTML='<p>Player '+(room.undo.by+1)+' requests an undo. '+(room.undo.revealed?'Cards or random information have been revealed. Both players will still know what they saw.':'')+'</p>'+(room.undo.by!==p?'<button id="undo-yes">Agree</button><button id="undo-no">Decline</button>':'Waiting for your opponent’s agreement.');if($('#undo-yes')){$('#undo-yes').onclick=()=>command('undo-answer',{accept:true});$('#undo-no').onclick=()=>command('undo-answer',{accept:false});}return;}if(s.setup){
  const setup=s.setup;
  if(setup.stage==='roll'||setup.stage==='choose-first'){
   const rolls=setup.rolls.map((value,i)=>esc(room.names[i])+': '+(value??'—')).join(' · ');
@@ -169,7 +171,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
  if($('#reopen-mulligan'))$('#reopen-mulligan').onclick=()=>{mulliganMinimized=false;renderMulligan();};
  renderMulligan();
  return;
-}const c=s.auto.choice;if(s.manualWindow&&!(c&&['level','level-order','rule-order'].includes(c.kind))){el.innerHTML='<p>Manual effect · '+esc(s.manualWindow.reason)+' · '+esc(room.names[s.manualWindow.p])+' must resolve it.</p>'+(s.manualWindow.p===p?'<button id="manual-open">Open manual controls</button><button id="manual-done">Finish effect</button>':'');if($('#manual-open')){$('#manual-open').onclick=manualTools;$('#manual-done').onclick=()=>act('effect-done');}return;}if(c){el.innerHTML='<h3>'+esc(c.title)+'</h3>'+(c.abilityText?'<p class="ability-prompt-text">'+esc(c.abilityText)+'</p>':'')+(c.kind==='auto-manual'?'<button id="open-trigger-manual">Open manual controls</button>':'')+'<div class="online-choices">'+c.options.map((o,i)=>'<button data-answer="'+i+'" '+(o.disabled?'disabled':'')+'>'+(o.card?api.image(o.card):'')+esc(o.label)+'</button>').join('')+'</div>';if($('#open-trigger-manual'))$('#open-trigger-manual').onclick=manualTools;el.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>act('respond',{choice:c.id,value:c.options[+b.dataset.answer].value}));}else el.innerHTML=s.choiceOwner!==null?'<p>Waiting for '+esc(room.names[s.choiceOwner])+' to make a choice.</p>':'';}
+}const c=s.auto.choice;if(s.manualWindow&&!(c&&['level','level-order','rule-order'].includes(c.kind))){el.innerHTML='<p>Manual effect · '+esc(s.manualWindow.reason)+' · '+esc(room.names[s.manualWindow.p])+' must resolve it.</p>'+(s.manualWindow.p===p?'<button id="manual-open">Open manual controls</button><button id="manual-done">Finish effect</button>':'');if($('#manual-open')){$('#manual-open').onclick=manualTools;$('#manual-done').onclick=()=>act('effect-done');}return;}if(c){el.innerHTML='<h3>'+esc(c.title)+'</h3>'+(c.abilityText?'<p class="ability-prompt-text">'+esc(c.abilityText)+'</p>':'')+(c.kind==='auto-manual'?'<button id="open-trigger-manual">Open manual controls</button>':'')+'<div class="online-choices">'+c.options.map((o,i)=>'<button data-answer="'+i+'" '+(o.disabled?'disabled':'')+'>'+(o.card?api.image(o.card):'')+esc(o.label)+'</button>').join('')+'</div>';if($('#open-trigger-manual'))$('#open-trigger-manual').onclick=manualTools;el.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>act('respond',{choice:c.id,value:c.options[+b.dataset.answer].value}));}else el.innerHTML=s.auto.notice?'<p class="ability-prompt-text" role="status">'+esc(s.auto.notice)+'</p>':s.choiceOwner!==null?'<p>Waiting for '+esc(room.names[s.choiceOwner])+' to make a choice.</p>':'';}
 
  let cardActions=null,cardAnchor=null;
  function closeCardActions(){cardActions?.remove();cardActions=null;cardAnchor=null;}

@@ -81,6 +81,20 @@ function automaticTiming(text){
 function simpleTriggeredEffect(body){
  body=body.replace(/\.["”]\s*$/,'.');
  let m;
+ if((m=body.match(/^(You may put|Put) (?:up to (?:1|one) card from the top|the top card) of your clock into your (waiting room|stock)(?:, and this card gets (.+) until end of turn)?\.$/i))){
+  const boost=m[3]?modifiers(m[3]):null;
+  if(!m[3]||boost)return {type:'ability-clock-move',to:m[2].toLowerCase()==='stock'?'stock':'waiting',optional:/^you may/i.test(m[1])||!boost&&/^Put up to/i.test(body),upTo:!!boost&&/^Put up to/i.test(body),boost};
+ }
+ if((m=body.match(/^(You may choose|Choose) (up to )?(?:1|one) (character|climax) in your waiting room, and return it to your hand\.$/i)))
+  return {type:'ability-salvage',cardType:m[3].toLowerCase()==='climax'?'Climax':'Character',upTo:!!m[2],optional:/^you may/i.test(m[1])};
+ if((m=body.match(/^(You may choose|Choose) (?:1|one) card in your hand, and put it into your stock\.$/i)))
+  return {type:'ability-hand-move',to:'stock',count:1,optional:/^you may/i.test(m[1])};
+ if((m=body.match(/^Draw (up to )?(\d+|a) cards?, choose (\d+|one) cards? in your hand, and put (?:it|them) into your waiting room\.$/i)))
+  return {type:'ability-draw-then-move',count:m[2].toLowerCase()==='a'?1:+m[2],upTo:!!m[1],discard:m[3].toLowerCase()==='one'?1:+m[3]};
+ if((m=body.match(/^Look at the top card of your deck, and put it (?:on the top of your deck or into your waiting room|on the top or at the bottom of your deck)\.$/i)))
+  return {type:'ability-look-place',to:/waiting room/i.test(body)?'waiting':'deck'};
+ if((m=body.match(/^Look at (up to )?(\d+) cards? from the top of your deck, and put them on the top of your deck in any order\.$/i)))
+  return {type:'ability-look-order',count:+m[2],upTo:!!m[1]};
  if((m=body.match(/^(You may draw|Draw) (up to )?(a|\d+) cards?\.$/i)))
   return {type:'ability-draw',count:m[3].toLowerCase()==='a'?1:+m[3],optional:!!m[2]||/^you may/i.test(m[1]),upTo:!!m[2]};
  if((m=body.match(/^(You may put|Put) the top (?:(\d+) cards?|card) of your deck into your waiting room\.$/i)))
@@ -91,12 +105,12 @@ function simpleTriggeredEffect(body){
   const boost=m[3]?modifiers(m[3]):null;
   if(!m[3]||boost)return {type:'ability-look',count:+m[2],upTo:!!m[1],boost};
  }
- if(/^You may choose (?:1|one) character in your waiting room, and return it to your hand\.$/i.test(body))
-  return {type:'ability-salvage',optional:true};
  if((m=body.match(/^Search your deck for up to (?:1|one) (?:《([^》]+)》 )?character, reveal it to your opponent, put it into your hand, and shuffle your deck\.$/i)))
   return {type:'ability-search',trait:m[1]};
  if((m=body.match(/^Search your deck for up to (?:1|one) card named "([^"]+)", reveal it to your opponent, put it into your hand, and shuffle your deck\.$/i)))
   return {type:'ability-search',name:m[1]};
+ if((m=body.match(/^Search your deck for up to (?:1|one) level (\d+) or lower character, reveal it to your opponent, put it into your hand, and shuffle your deck\.$/i)))
+  return {type:'ability-search',maxLevel:+m[1]};
  if((m=body.match(/^Look at (up to )?(\d+|four) cards? from the top of your deck, choose up to (?:1|one) 《([^》]+)》 or 《([^》]+)》 character from among them, reveal it to your opponent, put it into your hand, and put the rest into your waiting room\.$/i)))
   return {type:'ability-look',count:m[2].toLowerCase()==='four'?4:+m[2],upTo:!!m[1],traits:[m[3],m[4]],reveal:true};
  return null;
@@ -131,7 +145,7 @@ function parseActivatedAbility(text){
  if(/^Choose (?:1|one) of your opponent's characters, and return it to their hand\.$/.test(body))return {...payment,kind:'bounce'};
  if(/^Choose (?:1|one) of your characters, and 【STAND】 it\.$/.test(body))return {...payment,kind:'stand'};
  const simple=simpleTriggeredEffect(body);
- if(simple&&['ability-look','ability-mill'].includes(simple.type)&&!simple.optional)return {...payment,kind:'simple',task:simple};
+ if(simple&&!simple.optional)return {...payment,kind:'simple',task:simple};
  return null;
 }
 export function createResolver(card){
@@ -177,20 +191,36 @@ export function createResolver(card){
     tasks.push({type:parsed.kind,p:source.p,source,label,...parsed});
    }else if(parsed?.kind==='attack-self')tasks=[{type:'entry-self',p:source.p,source,label,...parsed}];
    else{
-    const paid=text.match(/^【AUTO】\s*\[\((\d+)\)( Put 1 card from your hand into your waiting room)?( Put the top card of your deck into your clock)?\]/i)
-     ||text.match(/^【自】\s*［\((\d+)\)］/);
+    const paid=automaticPayment(text);
     const paidBody=trigger.body.match(/^You may pay the cost\. If you do, (.+)$/i)
      ||trigger.body.match(/^あなたはコストを払ってよい。そうしたら、(.+)$/);
     const simple=paid&&paidBody?simpleTriggeredEffect(paidBody[1]):/^【(?:AUTO|自)】\s*(?:\[|［)/.test(text)?null:simpleTriggeredEffect(trigger.body);
     if(simple)tasks=[{...simple,p:source.p,source,label}];
+    if(simple?.type==='ability-draw'&&simple.count===1&&simple.upTo&&!paid)tasks[0].upTo=false;
     if(simple&&paid&&paidBody){
-     if(z(s,source.p).stock.length<+paid[1]||paid[2]&&!z(s,source.p).hand.length||paid[3]&&!z(s,source.p).deck.length)continue;
-     tasks=[{type:'ability-pay',stock:+paid[1],discard:!!paid[2],clockTop:!!paid[3],p:source.p,then:tasks[0],optional:true}];
+     if(!canPayAutomatic(s,source.p,paid))continue;
+     tasks=[{type:'ability-pay',...paid,p:source.p,then:tasks[0],optional:true}];
     }
    }
    const optional=tasks[0]?.optional||!tasks.length&&/^(?:you may|あなたは.*(?:してよい|払ってよい))/i.test(trigger.body);
    (a.triggered??=[]).push({type:'ability-offer',p:source.p,label,text,optional,tasks});
   }
+ }
+ function automaticPayment(text){
+  const stock=text.match(/^【AUTO】\s*\[\((\d+)\)\]/i)||text.match(/^【自】\s*［\((\d+)\)］/);
+  if(stock)return {stock:+stock[1]};
+  const clock=text.match(/^【AUTO】\s*\[\((\d+)\) Put the top card of your deck into your clock\]/i);
+  if(clock)return {stock:+clock[1],clockTop:true};
+  const discard=text.match(/^【AUTO】\s*\[(?:\((\d+)\) )?Put (?:1|one) (card|climax|character) from your hand into your waiting room\]/i);
+  if(discard)return {stock:+(discard[1]||0),discard:discard[2].toLowerCase()};
+  return null;
+ }
+ function paymentCards(s,p,t){
+  return z(s,p).hand.filter(c=>t.discard==='card'||get(c.id)?.type?.toLowerCase()===t.discard);
+ }
+ function canPayAutomatic(s,p,t){
+  const q=z(s,p);
+  return q.stock.length>=t.stock&&(!t.discard||paymentCards(s,p,t).length>0)&&(!t.clockTop||q.deck.length>0);
  }
  function flushTriggered(s){
   const a=auto(s);
@@ -256,6 +286,7 @@ export function createResolver(card){
   case 'trigger-continue':flushTriggered(s);break;
   case 'checkpoint':checkpoint(s,t.title,t.p);break;
   case 'ability-offer':{
+   delete a.notice;
    const supported=t.tasks.length>0;
    choice(s,supported?'ability-offer':'auto-manual',t.label+(supported?' · Triggered ability':' · Check this ability manually'),
     [{value:'resolve',label:supported?(t.optional?'Yes · Resolve':'Resolve required ability'):'Continue after checking / resolving manually'},
@@ -282,8 +313,38 @@ export function createResolver(card){
   case 'ability-look-discard':take(s,{p:t.p,z:'deck',uid:t.uid},'waiting');break;
   case 'ability-look-finish':finishAbilityLook(s,t.task);break;
   case 'ability-salvage':{
-   const options=z(s,t.p).waiting.filter(c=>get(c.id)?.type==='Character').map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'waiting',uid:c.uid}}));
-   if(options.length)choice(s,'ability-salvage','Waiting Room · Choose a character to return to hand',[...options,...(t.upTo?[{value:'pass',label:'Choose none'}]:[])],{p:t.p});
+   const cardType=t.cardType||'Character';
+   const options=z(s,t.p).waiting.filter(c=>get(c.id)?.type===cardType).map(c=>cardOption(t.p,'waiting',c));
+   if(options.length===1&&!t.upTo)take(s,options[0].ref,'hand');
+   else if(options.length)choice(s,'ability-salvage','Waiting Room · Choose a '+cardType.toLowerCase()+' to return to hand',[...options,...(t.upTo?[{value:'pass',label:'Choose none'}]:[])],{p:t.p});
+   break;
+  }
+  case 'ability-clock-move':{
+   const clock=z(s,t.p).clock;
+   if(clock.length&&t.upTo){
+    choice(s,'ability-clock-choice','Move the top card of your Clock?',[
+     {...cardOption(t.p,'clock',clock.at(-1)),label:'Move to '+(t.to==='stock'?'Stock':'Waiting Room')},
+     {value:'pass',label:'Leave it in Clock'}
+    ],{p:t.p,task:t});
+   }else finishClockMove(s,t,clock.length>0);
+   break;
+  }
+  case 'ability-hand-move':chooseHandMove(s,t);break;
+  case 'ability-draw-then-move':
+   prepend(s,{type:'ability-draw',p:t.p,count:t.count,upTo:t.upTo},{type:'ability-hand-move',p:t.p,to:'waiting',count:t.discard});
+   break;
+  case 'ability-look-place':{
+   const card=z(s,t.p).deck.at(-1);
+   if(card)choice(s,'ability-look-place','Top of Deck · Choose where to put this card',[
+    {value:'keep',label:'Keep on top',card:card.id},
+    {value:'move',label:t.to==='waiting'?'Move to Waiting Room':'Put on bottom',card:card.id}
+   ],{p:t.p,task:t,looked:[card.uid]});
+   break;
+  }
+  case 'ability-look-order':{
+   const count=Math.min(t.count,z(s,t.p).deck.length);
+   if(t.upTo&&count)choice(s,'ability-count','How many top cards do you want to look at?',Array.from({length:count+1},(_,i)=>({value:String(i),label:String(i)})),{p:t.p,task:t});
+   else beginLookOrder(s,t,count);
    break;
   }
   case 'brainstorm-flip':{
@@ -302,26 +363,31 @@ export function createResolver(card){
    break;
   }
   case 'ability-pay':{
-   const q=z(s,t.p);
-   if(q.stock.length<t.stock||t.discard&&!q.hand.length||t.clockTop&&!q.deck.length)break;
+   if(!canPayAutomatic(s,t.p,t))break;
    if(t.discard){
-    choice(s,'ability-pay-card','Hand · Choose one card to discard as cost',q.hand.map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'hand',uid:c.uid}})),{p:t.p,task:t});
+    const options=paymentCards(s,t.p,t).map(c=>cardOption(t.p,'hand',c));
+    if(options.length===1)finishAbilityPayment(s,t,options[0].ref);
+    else choice(s,'ability-pay-card','Hand · Choose one '+t.discard+' to discard as cost',options,{p:t.p,task:t});
    }else{
-    for(let i=0;i<t.stock;i++)take(s,{p:t.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
-    if(t.clockTop)take(s,{p:t.p,z:'deck',uid:q.deck.at(-1).uid},'clock');
-    prepend(s,t.then);
+    finishAbilityPayment(s,t);
    }
    break;
   }
   case 'ability-search':{
+   delete auto(s).notice;
    const q=z(s,t.p);
    const options=q.deck.filter(c=>{
     const card=get(c.id);
     if(t.name)return getCardName(card)===t.name;
-    return card?.type==='Character'&&(!t.trait||(card.attributes||[]).some(trait=>trait.replace(/^《|》$/g,'')===t.trait));
+    return card?.type==='Character'&&(t.maxLevel===undefined||Number(card.level)<=t.maxLevel)&&(!t.trait||(card.attributes||[]).some(trait=>trait.replace(/^《|》$/g,'')===t.trait));
    }).map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id})).sort((a,b)=>a.label.localeCompare(b.label)||a.value.localeCompare(b.value));
    if(options.length)choice(s,'ability-search','Deck · Choose up to one '+(t.name?'card named '+t.name:'eligible character'),[...options,{value:'pass',label:'Choose none and shuffle'}],{p:t.p,task:t});
-   else shuffle(q.deck);
+   else{
+    shuffle(q.deck);
+    const message=t.name?'Deck searched and shuffled. No card named exactly “'+t.name+'” was found.':'Deck searched and shuffled. No eligible character was found.';
+    auto(s).notice={p:t.p,message};
+    log(s,'Player '+(t.p+1)+' searched and shuffled without taking a card.');
+   }
    break;
   }
   case 'declare-request':beginAttack(s,t.ref,t.attackType);break;
@@ -387,6 +453,39 @@ export function createResolver(card){
  function finishAbilityLook(s,t){
   if(t.boost&&inst(s,t.source))effect(s,t.source,t.boost,t.label);
  }
+ function cardOption(p,zone,card){
+  return {value:card.uid,label:get(card.id)?.name||card.id,card:card.id,ref:{p,z:zone,uid:card.uid}};
+ }
+ function finishAbilityPayment(s,t,discard){
+  if(!canPayAutomatic(s,t.p,t))throw Error('You cannot pay the full cost of this ability.');
+  const q=z(s,t.p);
+  for(let i=0;i<t.stock;i++)take(s,{p:t.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
+  if(discard)take(s,discard,'waiting');
+  if(t.clockTop)take(s,{p:t.p,z:'deck',uid:q.deck.at(-1).uid},'clock');
+  prepend(s,t.then);
+ }
+ function finishClockMove(s,t,moveCard){
+  const clock=z(s,t.p).clock;
+  if(moveCard&&clock.length)take(s,{p:t.p,z:'clock',uid:clock.at(-1).uid},t.to);
+  finishAbilityLook(s,t);
+ }
+ function chooseHandMove(s,t,picked=[]){
+  const hand=z(s,t.p).hand,remaining=hand.filter(c=>!picked.includes(c.uid));
+  const count=Math.min(t.count,hand.length);
+  if(picked.length>=count||remaining.length===count-picked.length){
+   const chosen=picked.length>=count?picked:[...picked,...remaining.map(c=>c.uid)];
+   for(const uid of chosen)take(s,{p:t.p,z:'hand',uid},t.to);
+  }else choice(s,'ability-hand-move','Hand · Choose '+(count-picked.length)+' card(s) for '+(t.to==='stock'?'Stock':'Waiting Room'),remaining.map(c=>cardOption(t.p,'hand',c)),{p:t.p,task:t,picked});
+ }
+ function beginLookOrder(s,t,count,picked=[],looked=z(s,t.p).deck.slice(-count).reverse().map(c=>c.uid)){
+  if(!count)return;
+  const deck=z(s,t.p).deck,remaining=looked.filter(uid=>!picked.includes(uid));
+  if(remaining.length<=1){
+   const ordered=[...picked,...remaining].map(uid=>deck.find(c=>c.uid===uid)).filter(Boolean);
+   const excluded=new Set(looked);
+   z(s,t.p).deck=deck.filter(c=>!excluded.has(c.uid)).concat(ordered.reverse());
+  }else choice(s,'ability-look-order','Top of Deck · Choose the next card, top first',remaining.map(uid=>cardOption(t.p,'deck',deck.find(c=>c.uid===uid))),{p:t.p,task:t,picked,looked});
+ }
  function lookForAbility(s,t,count){
   if(!count)return finishAbilityLook(s,t);
   const cards=z(s,t.p).deck.slice(-count).reverse();
@@ -416,8 +515,18 @@ export function createResolver(card){
   case 'auto-manual':break;
   case 'ability-count':
    if(c.task.type==='ability-look')lookForAbility(s,c.task,+value);
+   else if(c.task.type==='ability-look-order')beginLookOrder(s,c.task,+value);
    else prepend(s,...Array.from({length:+value},()=>({type:'draw',p:c.p})));
    break;
+  case 'ability-clock-choice':finishClockMove(s,c.task,value!=='pass');break;
+  case 'ability-hand-move':chooseHandMove(s,c.task,[...c.picked,value]);break;
+  case 'ability-look-place':
+   if(value==='move'){
+    if(c.task.to==='waiting')take(s,{p:c.p,z:'deck',uid:c.looked[0]},'waiting');
+    else{const deck=z(s,c.p).deck;if(deck.at(-1)?.uid===c.looked[0])deck.unshift(deck.pop());}
+   }
+   break;
+  case 'ability-look-order':beginLookOrder(s,c.task,c.looked.length,[...c.picked,value],c.looked);break;
   case 'ability-look-target':
    if(value!=='pass'){
     const picked=take(s,{p:c.p,z:'deck',uid:value},'hand');
@@ -427,10 +536,7 @@ export function createResolver(card){
    break;
   case 'ability-salvage':if(value!=='pass')take(s,option.ref,'hand');break;
   case 'ability-pay-card':{
-   const q=z(s,c.p);
-   for(let i=0;i<c.task.stock;i++)take(s,{p:c.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
-   take(s,option.ref,'waiting');
-   prepend(s,c.task.then);
+   finishAbilityPayment(s,c.task,option.ref);
    break;
   }
   case 'ability-search':{

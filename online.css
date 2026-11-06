@@ -132,6 +132,32 @@
 .mulligan-card span { font-size: .8rem; overflow-wrap: anywhere; }
 .mulligan-card small { color: #e5d4ae; }
 .mulligan-card[aria-pressed=true] { border-color: #ffd07c; background: #4d392e; }
+[data-pile$="|stock"] .zone-count,
+[data-online-pile$="|stock"] b {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 1.5em;
+  padding: 2px 5px;
+  border: 1px solid #e9c985;
+  border-radius: 5px;
+  background: #15283e;
+  color: #fff1c8;
+  font: bold 16px/1.15 system-ui,sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.ability-zone-picker { width: min(900px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+.ability-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(100px,1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
+.ability-picker-grid button { display: grid; align-content: start; gap: 5px; padding: 5px; min-width: 0; }
+.ability-picker-grid img { display: block; height: 120px; width: 100%; object-fit: contain; }
+.ability-picker-grid span { font-size: .8rem; overflow-wrap: anywhere; }
 @media (max-width: 480px) {
   .mulligan-hand { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }

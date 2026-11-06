@@ -117,7 +117,7 @@ export function project(s,seat,catalog){const out=copy(s),r=resolverFor(catalog)
  for(let p=0;p<2;p++)for(const [z,arr] of Object.entries(out.players[p].zones)){const hideAll=z==='deck'||z==='stock'||z==='hand'&&p!==seat;out.players[p].zones[z]=arr.map((c,i)=>!c.revealed&&(hideAll||c.faceDown&&p!==seat)?{uid:'hidden:'+p+':'+z+':'+i,hidden:true,faceDown:true}:c);}
  const owner=choiceOwner(s),a=out.auto;out.waitingFor=s.setup?.p??owner??s.manualWindow?.p??s.active;
  // Queue/tasks contain deck order, private choice options and card identities. Never send them.
- out.auto={enabled:true,paused:a.paused,choice:owner===seat?a.choice:null,reveal:a.reveal,gameOver:a.gameOver,effects:a.effects,reviews:a.reviews?.filter(x=>!['hand','deck','stock'].includes(x.z)),results:a.results?.map(d=>({p:d.p,n:d.n,canceled:d.canceled,label:d.label})),attack:a.attack?{p:a.attack.p,type:a.attack.type,ref:a.attack.ref,defender:a.attack.defender}:null};
+ out.auto={enabled:true,notice:a.notice?.p===seat?a.notice.message:null,paused:a.paused,choice:owner===seat?a.choice:null,reveal:a.reveal,gameOver:a.gameOver,effects:a.effects,reviews:a.reviews?.filter(x=>!['hand','deck','stock'].includes(x.z)),results:a.results?.map(d=>({p:d.p,n:d.n,canceled:d.canceled,label:d.label})),attack:a.attack?{p:a.attack.p,type:a.attack.type,ref:a.attack.ref,defender:a.attack.defender}:null};
  out.choiceOwner=owner;out.events=out.events?.map(e=>({...e,refs:e.refs.filter(r=>!['deck','hand','stock'].includes(r.z)||r.p===seat),changes:(e.changes||[]).filter(c=>c.from.p===seat&&c.to.p===seat||![c.from.z,c.to.z].some(z=>['deck','hand','stock'].includes(z)))}));delete out.onlineManualOwner;delete out.first;delete out.revealUntil;
  return out;
 }

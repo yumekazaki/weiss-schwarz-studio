@@ -1,5 +1,36 @@
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pickerKinds=new Set(['ability-search','ability-look-target','ability-look-order','ability-look-place','ability-salvage','entry-stock']);
+export function mountAbilityPicker(parent,api){
+ const dialog=document.createElement('dialog');
+ dialog.className='ability-zone-picker';
+ dialog.setAttribute('aria-label','Choose a card for the current ability');
+ parent.append(dialog);
+ let displayed;
+ return (choice,respond,scope)=>{
+  if(!choice||!pickerKinds.has(choice.kind)){
+   if(dialog.open)dialog.close();
+   displayed=null;
+   return;
+  }
+  const key=scope+'|'+choice.id;
+  if(key===displayed)return;
+  displayed=key;
+  dialog.innerHTML='<h2>'+esc(choice.title)+'</h2><div class="ability-picker-grid">'+choice.options.filter(o=>o.card).map((o,i)=>
+   '<button type="button" data-picker-card="'+i+'" '+(o.disabled?'disabled':'')+'>'+api.image(o.card)+'<span>'+esc(o.label)+'</span></button>').join('')+'</div><div class="toolbar">'+
+   choice.options.filter(o=>!o.card).map((o,i)=>'<button type="button" data-picker-other="'+i+'">'+esc(o.label)+'</button>').join('')+
+   '<button type="button" data-picker-board>Review board</button></div>';
+  for(const [selector,options] of [['data-picker-card',choice.options.filter(o=>o.card)],['data-picker-other',choice.options.filter(o=>!o.card)]]){
+   dialog.querySelectorAll('['+selector+']').forEach(button=>button.onclick=()=>{
+    dialog.close();
+    respond(options[+button.getAttribute(selector)].value);
+   });
+  }
+  dialog.querySelector('[data-picker-board]').onclick=()=>dialog.close();
+  if(!dialog.open)dialog.showModal();
+ };
+}
 export function mountResolution(api){
+ const picker=mountAbilityPicker(document.body,api);
  const panel=document.createElement('section');panel.id='resolution-panel';panel.className='resolution-panel';panel.setAttribute('aria-label','Guided game resolution');$('.match-layout').before(panel);
  const refit=()=>window.dispatchEvent(new window.Event('resize'));panel.addEventListener('toggle',refit,true);if(window.ResizeObserver){const observer=new window.ResizeObserver(refit);[panel,document.querySelector('#practice>.heading'),document.querySelector('.table-toolbar')].filter(Boolean).forEach(e=>observer.observe(e));}
  const revealPanel=document.createElement('section');revealPanel.id='check-reveal-flash';revealPanel.setAttribute('role','status');revealPanel.setAttribute('aria-live','polite');revealPanel.hidden=true;document.body.append(revealPanel);
@@ -10,8 +41,10 @@ export function mountResolution(api){
   function finish(){if(api.state()!==s||s.auto?.reveal?.id!==r.id){clearFlash();return;}if(s.auto.paused||document.querySelector('#dialog')?.open||document.body.dataset.view!=='practice'){revealTimer=window.setTimeout(finish,100);return;}api.commit(r.kind==='trigger'?'Trigger check revealed':r.kind==='ability'?'Ability card revealed':'Damage check revealed',()=>api.resolver.finishReveal(s,r.id));}
   let started=false;function ready(){if(started)return;started=true;window.clearTimeout(loadTimer);revealTimer=window.setTimeout(finish,api.revealMs??700);}const img=revealPanel.querySelector('img');if(!img||img.complete)ready();else{img.addEventListener('load',ready,{once:true});img.addEventListener('error',ready,{once:true});loadTimer=window.setTimeout(ready,api.revealLoadMs??1800);}
  }
- function render(){const s=api.state();if(!s){clearFlash();return;}if(api.ready&&!api.ready()){panel.innerHTML='<p>Loading match cards…</p>';return;}const a=api.resolver.auto(s),c=a.choice,attack=a.attack,stats=attack?api.resolver.stats(s,attack.ref):null;
-  panel.innerHTML='<div class="resolution-header"><b>✦ '+esc(a.gameOver?'Game ended':c?.title||a.reveal?.label||(s.phase===5?s.step:['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase]+' phase')||'Core game procedures')+'</b><label><input id="auto-enabled" type="checkbox" '+(a.enabled?'checked':'')+'> Guided resolution</label><button id="core-rules">Check core rules</button><button id="pause-resolution">'+(a.paused?'Resume':'Pause')+'</button><button id="effect-tools">Effects & corrections</button><a class="support-link" href="automation-support.html" target="_blank" rel="noopener">Ability support ↗</a></div>'+(a.gameOver?'<p class="bad">Player '+a.gameOver.players.map(p=>p+1).join(' & ')+' loses · '+esc(a.gameOver.reason)+'</p>':'')+(stats?'<div class="attack-soul"><b>'+esc(attack.type.toUpperCase())+' · Soul '+stats.soul+'</b><button id="soul-breakdown">Soul & power breakdown'+(stats.unsupported.length?' · review abilities':'')+'</button></div>':'')+(c?(s.practiceBot&&c.p===1&&['ability-look-target','ability-search','ability-pay-card','ability-resonate','discard','act-target'].includes(c.kind)?'<p>Practice bot is choosing a card.</p>':choiceHTML(c)):'<p class="resolution-idle">'+(a.enabled?'Routine checks resolve automatically. Only available responses and card choices pause play.':'Manual mode. Existing controls remain available; turn guided resolution on to automate core procedures.')+'</p>')+(a.results[0]?'<details><summary>Last damage: '+esc(a.results[0].label)+' · '+(a.results[0].canceled?'canceled':a.results[0].n+' to clock')+'</summary><p>Revealed '+a.results[0].uids.length+' card(s). This outcome applies only to that damage instance.</p></details>':'');
+ function render(){const s=api.state();if(!s){clearFlash();picker(null);return;}if(api.ready&&!api.ready()){panel.innerHTML='<p>Loading match cards…</p>';return;}const a=api.resolver.auto(s),c=a.choice,attack=a.attack,stats=attack?api.resolver.stats(s,attack.ref):null;
+  picker(document.body.dataset.view==='practice'&&(!s.practiceBot||c?.p!==1)?c:null,value=>api.commit('Resolve card choice',()=>api.resolver.respond(s,c.id,value)),s.deckNames?.join('|')||'practice');
+  panel.innerHTML='<div class="resolution-header"><b>✦ '+esc(a.gameOver?'Game ended':c?.title||a.reveal?.label||(s.phase===5?s.step:['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase]+' phase')||'Core game procedures')+'</b><label><input id="auto-enabled" type="checkbox" '+(a.enabled?'checked':'')+'> Guided resolution</label><button id="core-rules">Check core rules</button><button id="pause-resolution">'+(a.paused?'Resume':'Pause')+'</button><button id="effect-tools">Effects & corrections</button><a class="support-link" href="automation-support.html" target="_blank" rel="noopener">Ability support ↗</a></div>'+(a.gameOver?'<p class="bad">Player '+a.gameOver.players.map(p=>p+1).join(' & ')+' loses · '+esc(a.gameOver.reason)+'</p>':'')+(stats?'<div class="attack-soul"><b>'+esc(attack.type.toUpperCase())+' · Soul '+stats.soul+'</b><button id="soul-breakdown">Soul & power breakdown'+(stats.unsupported.length?' · review abilities':'')+'</button></div>':'')+(c?(s.practiceBot&&c.p===1&&['ability-look-target','ability-look-order','ability-look-place','ability-search','ability-pay-card','ability-hand-move','ability-resonate','discard','act-target'].includes(c.kind)?'<p>Practice bot is choosing a card.</p>':choiceHTML(c)):'<p class="resolution-idle">'+(a.enabled?'Routine checks resolve automatically. Only available responses and card choices pause play.':'Manual mode. Existing controls remain available; turn guided resolution on to automate core procedures.')+'</p>')+(a.results[0]?'<details><summary>Last damage: '+esc(a.results[0].label)+' · '+(a.results[0].canceled?'canceled':a.results[0].n+' to clock')+'</summary><p>Revealed '+a.results[0].uids.length+' card(s). This outcome applies only to that damage instance.</p></details>':'');
+  if(a.notice&&(!s.practiceBot||a.notice.p!==1))panel.insertAdjacentHTML('beforeend','<p class="ability-prompt-text" role="status">'+esc(a.notice.message)+'</p>');
   panel.insertAdjacentHTML('beforeend','<details><summary>Action log</summary><div class="resolution-log">'+s.log.filter(t=>!t.includes('Resolution choice: Pending abilities resolved / none pending')).slice(0,20).map(t=>'<p>'+esc(t)+'</p>').join('')+'</div></details>');
   if(a.reviews.length)panel.insertAdjacentHTML('beforeend','<details class="manual-review"><summary>Other card text remains manual · '+a.reviews.length+' item(s)</summary><p>These effects are not automated. Pause to apply any applicable modifiers or other effects with the manual tools.</p>'+a.reviews.map(t=>'<p><b>'+esc(t.code)+'</b> '+esc(t.text)+'</p>').join('')+'</details>');
   $('#pause-resolution').onclick=()=>api.commit(a.paused?'Resumed automatic resolution':'Paused automatic resolution',()=>{a.paused=!a.paused;if(!a.paused)api.resolver.run(s);});
