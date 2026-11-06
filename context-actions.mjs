@@ -22,7 +22,7 @@ export function cardContext({match,ref,card,englishAbility=''}){
   if(ownTurn&&phase===2)add('clock','Clock this card & draw 2');
   if(ownTurn&&phase===3&&card?.type==='Character')add('play-stage','Play to stage…',{hint:'Check level, color and costs; resolve abilities manually.'});
   if(ownTurn&&phase===3&&card?.type==='Event')add('event','Play event → resolution',{hint:'Pay costs and resolve the card manually.'});
-  if(ownTurn&&phase===4&&card?.type==='Climax')add('climax','Play to climax area');
+  if(ownTurn&&phase===4&&card?.type==='Climax')add('climax','Play climax');
   const counterText=englishAbility+' '+(card?.ability||[]).join(' ');
   if(!ownTurn&&phase===5&&match.step==='Counter'&&(!match.attackType||match.attackType==='Frontal')&&/COUNTER|BACKUP|助太刀|カウンター/i.test(counterText)){if(card?.type==='Event')add('counter','Play counter event → resolution',{hint:'One counter play timing. Pay costs and resolve its text manually.'});else if(/BACKUP|助太刀/i.test(counterText))add('backup','Use backup: resolve its cost…',{hint:'This is an ability from hand; the character is not played onto the stage.'});else add('counter-ability','Activate counter ability…',{hint:'Pay the printed cost and resolve the ability manually.'});}
   add('discard','Discard to waiting room');

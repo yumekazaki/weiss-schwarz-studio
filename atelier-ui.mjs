@@ -145,7 +145,7 @@ export function mountAtelier(api){
   if(key==='event'||key==='counter')return moveTo(ref,'resolution');
   if(key==='backup')return showSimpleMenu(menu,'Backup cost · resolve its text manually',[{label:'Discard this card → waiting room',hint:'Pay any printed stock cost separately. No power or effects are applied automatically.',run:()=>moveTo(ref,'waiting')},{label:'Pay stock / other printed costs…',run:revealManual}]);
   if(key==='counter-ability')return revealManual();
-  if(key==='climax')return moveTo(ref,'climax');
+  if(key==='climax')return api.playClimax(ref);
   if(key==='discard')return moveTo(ref,'waiting');
   if(key==='return-hand')return moveTo(ref,'hand');
   if(key==='deck-top'||key==='deck-bottom')return api.move([ref],ref.p,'deck',key==='deck-top'?'top':'bottom');
@@ -156,7 +156,7 @@ export function mountAtelier(api){
   const s=api.state(),instance=api.instance(ref);if(!instance)return;const readable=api.readable(ref),card=readable?api.card(instance.id):null,choices=cardContext({match:s.match,ref,card,englishAbility:card?api.englishAbility(card.id):''}).map(c=>({...c,hint:s.match.auto?.enabled&&c.key.startsWith('attack-')?'Guided attack: calculate soul, resolve triggers, responses and damage.':c.hint,run:()=>runContext(c.key,ref)}));
   choices.push({label:'Inspect / search this zone',run:()=>api.openPile(ref.p,ref.z)});
   if(readable)choices.unshift({label:'⤢ Pin card details',run:()=>api.inspect(instance.id)});
-  if(readable&&api.abilities(ref).length)choices.unshift({label:'Activate ability…',run:()=>api.openAbilities(ref,revealManual)});
+  if(readable)choices.unshift({label:'Activate ability…',run:()=>api.openAbilities(ref,revealManual)});
   const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock'].includes(to));
   const moveOption=([to,position,label])=>({label,run:()=>api.move([ref],ref.p,to,position)});
   choices.push(...manualMoves.map(moveOption));

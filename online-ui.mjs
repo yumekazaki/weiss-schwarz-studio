@@ -183,7 +183,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    if(!own)return showCardActions(anchor,api.name(c.id)+' · '+api.zoneName(ref.z),actions,more);
    const current=s.active===p&&!s.auto.attack&&!s.auto.choice&&!s.auto.reveal&&!s.auto.paused&&!s.manualWindow&&!s.undoRequest;
    const abilities=activatedAbilities(info);
-   if(abilities.length)actions.push(['Activate ability…',()=>openAbilities(ref,info,abilities,current)]);
+   if(info)actions.push(['Activate ability…',()=>openAbilities(ref,info,abilities,current)]);
    const manualAllowed=!s.undoRequest&&!s.auto.reveal&&(s.manualWindow?.p===p||s.choiceOwner===p&&['manual-counter','encore-manual','unknown-icon'].includes(s.auto.choice?.kind)||!s.manualWindow&&!s.auto.attack&&!s.auto.choice&&!s.auto.paused&&s.choiceOwner==null);
    if(ref.z==='hand'&&current){
     if(s.phase===2&&s.clockedTurn!==s.turn)actions.push(['Clock this card and draw two',()=>act('clock',{ref})]);
@@ -191,7 +191,9 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
     const level=Number(info?.level)||0,cost=Number(info?.cost)||0;
     const climax=info?.type==='Climax';
     const color=(!climax&&!level)||[...ownZones.clock,...ownZones.level].some(card=>api.card(card.id)?.color===info?.color);
-    if(info&&level<=ownZones.level.length&&cost<=ownZones.stock.length&&color&&(climax?s.phase===4&&!ownZones.climax.length:s.phase===3)){
+    if(climax&&s.phase===4){
+     actions.push(['Play climax',()=>act('play',{ref})]);
+    }else if(info&&!climax&&s.phase===3&&level<=ownZones.level.length&&cost<=ownZones.stock.length&&color){
      actions.push(['Play '+info.type.toLowerCase(),()=>info.type==='Character'?chooseStage(to=>act('play',{ref,to})):act('play',{ref})]);
     }
    }
@@ -226,6 +228,11 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
   showCardActions(anchor,api.name(c.id)+' · '+api.zoneName(ref.z),actions,more);
  }
  function openAbilities(ref,card,abilities,current){
+  if(!abilities.length){
+   show('<h2>Activate ability</h2><p>This card has no activated (ACT) abilities. AUTO abilities trigger at their stated timing, and CONT abilities apply while their conditions are met.</p><button id="online-read-ability-card">Read card</button>');
+   $('#online-read-ability-card').onclick=()=>api.inspect(card.id);
+   return;
+  }
   const s=room.state,choice=s.auto.choice;
   const backup=choice?.kind==='counter'&&choice.options.find(o=>o.value===ref.uid&&o.backup);
   const canActivate=current&&s.phase===3&&stage.includes(ref.z);
