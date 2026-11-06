@@ -212,7 +212,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
      more.push(move(['markers:'+to,'top','Place as marker under '+api.zoneName(to)]));
     }
     if(isStage)for(const orientation of ['stand','rest','reverse']){
-     if(c.orientation!==orientation)more.push([orientation[0].toUpperCase()+orientation.slice(1)+' character',()=>run('manual-orient',{orientation})]);
+     if(c.orientation!==orientation)actions.push([orientation[0].toUpperCase()+orientation.slice(1)+' character',()=>run('manual-orient',{orientation})]);
     }
     more.push([c.revealed?'Stop revealing card':'Reveal card',()=>run('manual-reveal',{reveal:!c.revealed})],['Flip face up / down',()=>run('manual-flip')]);
     more.push(['Select / deselect for multiple cards',()=>toggleCardSelection(ref)]);

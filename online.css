@@ -48,8 +48,17 @@
   aspect-ratio: 0.72;
   padding: 0;
 }
-.online-fullscreen .online-stage .online-card { position: absolute; inset: 0; width: 100%; height: 100%; }
-.online-fullscreen .online-stage .online-card img { display: block; object-fit: contain; }
+.online-fullscreen .online-stage .online-card { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; border-radius: inherit; }
+#online.online-fullscreen .online-stage .online-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  float: none;
+  object-fit: cover;
+}
 .online-fullscreen .online-stage .online-card.rest img { transform: rotate(90deg) scale(.72); }
 .online-fullscreen .online-stage>span,.online-fullscreen .online-stage>small {
   position: absolute;
