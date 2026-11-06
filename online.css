@@ -109,3 +109,29 @@
   object-fit: contain;
   margin: 0 auto 4px;
 }
+#opening-hand {
+  width: min(900px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: clamp(12px, 3vw, 28px);
+}
+#opening-hand h2 { margin: 0 0 8px; }
+.mulligan-hand {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 8px;
+}
+.mulligan-card {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 5px;
+  border: 2px solid transparent;
+  min-width: 0;
+}
+.mulligan-card img { width: 100%; height: auto; display: block; }
+.mulligan-card span { font-size: .8rem; overflow-wrap: anywhere; }
+.mulligan-card small { color: #e5d4ae; }
+.mulligan-card[aria-pressed=true] { border-color: #ffd07c; background: #4d392e; }
+@media (max-width: 480px) {
+  .mulligan-hand { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
