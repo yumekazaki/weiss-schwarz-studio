@@ -18,6 +18,27 @@ export function parseAbility(text){
  return null;
 }
 export function triggerIcons(c){return (c?.trigger||[]).map(x=>({BOUNCE:'RETURN',STOCK:'POOL',SALVAGE:'COMEBACK'}[x]||x));}
+export function activatedAbilities(card){
+ return (card?.ability||[]).join('\n').split(/(?=【(?:CONT|AUTO|ACT|永|自|起)】|\[ACT\])/)
+  .map(clean).filter(text=>/^(?:【ACT】|【起】|\[ACT\])/.test(text))
+  .map((text,index)=>({index,text,action:parseActivatedAbility(text)}));
+}
+function parseActivatedAbility(text){
+ const parts=text.replace(/^\[ACT\]/,'【ACT】').match(/^【ACT】 \[([^\]]+)\] (.+)$/);
+ if(!parts)return null;
+ const [,cost,body]=parts;
+ const stockRest=cost.match(/^(?:\((\d+)\)(?: (【REST】 this card))?|(【REST】 this card))$/);
+ const sacrifice=cost==='Put this card into your waiting room';
+ if(!stockRest&&!sacrifice)return null;
+ const payment={stock:Number(stockRest?.[1]||0),rest:!!(stockRest?.[2]||stockRest?.[3]),sacrifice};
+ const buff=body.match(/^Choose (?:1|one) of your characters, and that character gets \+(\d+) (power|soul) until end of turn\.$/);
+ if(buff)return {...payment,kind:'buff',modifier:{[buff[2]]:+buff[1]}};
+ if(body==='Put the top card of your clock into your waiting room.')return {...payment,kind:'heal'};
+ if(/^Draw (?:1|a) card, choose (?:1|one) card in your hand, and put it into your waiting room\.$/.test(body))return {...payment,kind:'draw-discard'};
+ if(/^Draw (?:1|a) card\.$/.test(body))return {...payment,kind:'draw'};
+ if(/^Choose (?:1|one) of your opponent's characters, and return it to their hand\.$/.test(body))return {...payment,kind:'bounce'};
+ return null;
+}
 export function createResolver(card){
  const get=id=>typeof card==='function'?card(id):card.get(id),z=(s,p)=>s.players[p].zones;
  function auto(s){const a=s.auto??={queue:[],choice:null,serial:0,effects:[],shots:[],results:[],enabled:true};a.reviews??=[];a.reveal??=null;a.optionalTop??='take';return a;}
@@ -82,6 +103,18 @@ export function createResolver(card){
   case 'entry-target':{const targets=optionsStage(s,t.p);if(targets.length===1)effect(s,targets[0].ref,t,t.label);else if(targets.length>1)choice(s,'target-effect','Choose a character for '+t.label,targets,{task:t});break;}
   case 'optional-move':if(z(s,t.p).deck.length){const obj=z(s,t.p).deck.pop();obj.faceDown=t.to==='stock';z(s,t.p)[t.to].push(obj);}else log(s,'No deck card available for optional trigger transfer.');break;
   case 'draw':if(z(s,t.p).deck.length){const obj=z(s,t.p).deck.pop();obj.faceDown=false;z(s,t.p).hand.push(obj);}else log(s,'No card available to draw.');break;
+  case 'act-effect':{
+   const q=z(s,t.p);
+   if(t.action.kind==='heal'){
+    if(q.clock.length)take(s,{p:t.p,z:'clock',uid:q.clock.at(-1).uid},'waiting');
+   }else{
+    const options=t.action.kind==='draw-discard'
+     ?q.hand.map(c=>({value:c.uid,label:get(c.id)?.name||c.id,card:c.id,ref:{p:t.p,z:'hand',uid:c.uid}}))
+     :optionsStage(s,t.action.kind==='bounce'?1-t.p:t.p).filter(o=>get(o.card)?.type==='Character');
+    if(options.length)choice(s,'act-target','Choose a card for '+t.label,options,{p:t.p,task:t});
+   }
+   break;
+  }
   case 'encore':{s.step='Encore';const candidates=[s.active,1-s.active].flatMap(p=>allStage(s,p).filter(r=>inst(s,r).orientation==='reverse'));if(candidates.length===1){const r=candidates[0],obj=take(s,r,'waiting');prepend(s,check(s,'Character moved from stage to waiting'),{type:'encore-offer',p:r.p,position:r.z,card:obj});}else if(candidates.length){const p=candidates[0].p;choice(s,'encore-select','Player '+(p+1)+' · choose the next reversed character to send to waiting',candidates.filter(r=>r.p===p).map(r=>({value:r.uid,label:get(inst(s,r).id)?.name,ref:r})));}else {s.phase=6;prepend(s,check(s,'Beginning of end phase'),{type:'end-discard'});}break;}
   case 'encore-offer':{const canPay=z(s,t.p).stock.length>=3,other=abilityLines(get(t.card.id)).some(text=>/Encore/i.test(text));if(canPay||other)choice(s,'encore-offer','Encore · '+get(t.card.id)?.name,[...(canPay?[{value:'pay',label:'Pay top 3 stock · return rested'}]:[]),...(other?[{value:'manual',label:'Other printed Encore ability'}]:[]),{value:'pass',label:'Decline Encore'}],{task:t,p:t.p});else prepend(s,{type:'encore'});break;}
   case 'end-discard':{const p=s.active,q=z(s,p);if(q.hand.length>7)choice(s,'discard','Player '+(p+1)+' · discard to seven cards',q.hand.map(c=>({value:c.uid,label:get(c.id)?.name,card:c.id})),{p});else{q.waiting.push(...q.climax.splice(0));prepend(s,check(s,'End phase cleanup'),{type:'end-expire'});}break;}
@@ -99,6 +132,12 @@ export function createResolver(card){
   if(['RETURN','COMEBACK','GATE','STANDBY','CHOICE'].includes(icon)){if(!opts.length){log(s,icon+' has no eligible target; passed automatically.');return;}choice(s,'trigger-target',icon+' · choose up to one card',[...opts,{value:'pass',label:'Decline'}],{p,icon});return;}choice(s,'unknown-icon','Unsupported trigger icon: '+icon,[{value:'done',label:'Resolved manually'}],{unsupported:[{text:'Resolve the printed icon manually before continuing.'}]});}
  function beginAttack(s,r,type){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver)throw Error('Finish the current resolution first.');const c=inst(s,r),d=get(c?.id);if(s.phase!==5||s.active!==r.p||!r.z.startsWith('center-')||!c||c.orientation!=='stand'||d?.type!=='Character')throw Error('A standing active-player center-stage character is required.');if(s.turn===1&&(s.attacksThisTurn||0)>=1)throw Error('The starting player may attack only once on the first turn.');if(a.attackPhaseTurn!==s.turn){a.attackPhaseTurn=s.turn;prepend(s,check(s,'Beginning of attack phase'),check(s,'Beginning of attack declaration step'),{type:'declare-request',ref:{...r},attackType:type});run(s);return;}const dz=facing(r.z),def=z(s,1-r.p)[dz].at(-1);if(!def)type='direct';else if(!['frontal','side'].includes(type))throw Error('Choose frontal or side against the opposing character.');a.attack={p:r.p,ref:{...r},type,defender:def?{p:1-r.p,z:dz,uid:def.uid}:null};c.orientation='rest';s.attackType=type[0].toUpperCase()+type.slice(1);s.attacksThisTurn=(s.attacksThisTurn||0)+1;s.step='Attack declaration';if(type==='direct')effect(s,r,{soul:1},'Direct attack','attack');if(type==='side')effect(s,r,{soul:-Math.max(0,stats(s,{p:1-r.p,z:dz,uid:def.uid}).level||0)},'Side attack · defending level at declaration','attack');for(const text of abilityLines(d)){const ab=parseAbility(text);if(ab?.kind==='attack-self')effect(s,r,ab,text);}prepend(s,check(s,'Attack declared / after rest'),{type:'trigger-start'});log(s,'Player '+(r.p+1)+' declared '+type+' attack; attacker rested.');run(s);}
  function respond(s,id,value,extra={}){if(s.cost)throw Error('Finish the complete cost and end cost-payment suspension before continuing.');const a=auto(s),c=a.choice;if(!c||c.id!==id)throw Error('This choice has already been resolved.');const option=c.options.find(o=>o.value===value);if(!option)throw Error('Choose an available option.');a.choice=null;switch(c.kind){
+  case 'act-target':{
+   const {action,label}=c.task;
+   if(action.kind==='buff')effect(s,option.ref,action.modifier,label);
+   else take(s,option.ref,action.kind==='bounce'?'hand':'waiting');
+   break;
+  }
   case 'rule-order':if(value==='level')levelChoice(s,c.p);else refreshNow(s,c.p);break;
   case 'level':resolveLevel(s,c.p,value);break;
   case 'level-order':{const picked=c.cards.find(x=>x.uid===value);c.cards=c.cards.filter(x=>x!==picked);c.ordered.push(picked);if(c.cards.length){choice(s,'level-order',c.title,c.cards.map(x=>({value:x.uid,label:get(x.id)?.name,card:x.id})),{p:c.p,cards:c.cards,ordered:c.ordered});}else z(s,c.p).waiting.push(...c.ordered);break;}
@@ -128,5 +167,23 @@ export function createResolver(card){
  function drawCards(s,p,n){procedure(s,Array.from({length:n},()=>({type:'draw',p})));}
  function advance(s){const a=auto(s);if(a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver)throw Error('Finish the current resolution before advancing.');if(s.phase===5)return endAttacks(s);if(s.phase===0){prepend(s,check(s,'Beginning of stand phase'),{type:'stand'});}else if(s.phase===1){prepend(s,{type:'draw-phase'});}else if(s.phase===6){prepend(s,check(s,'Beginning of end phase'),{type:'end-discard'});}else{s.phase++;if(s.phase===5){a.attackPhaseTurn=s.turn;s.step='Attack declaration';}else s.step=['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase];prepend(s,check(s,'Beginning of '+['Stand','Draw','Clock','Main','Climax','Attack','End'][s.phase]+' phase'),s.phase===5?check(s,'Beginning of attack declaration step'):null);}run(s);}
  function finishReveal(s,id){const a=auto(s);if(!a.reveal||a.reveal.id!==id)throw Error('This reveal has already finished.');a.reveal=null;run(s);}
- return {ruleInterrupts,stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,manualEffect:effect,auto};
+ function activate(s,ref,index){
+  const a=auto(s),instance=inst(s,ref),card=get(instance?.id);
+  if(!a.enabled||a.choice||a.reveal||a.paused||a.queue.length||a.attack||a.gameOver||s.cost||s.botOpening!=null)throw Error('Finish the current resolution before activating an ability.');
+  if(s.phase!==3||s.active!==ref.p||!stage(ref.z)||instance?.faceDown||card?.type!=='Character')throw Error('Use a stage character’s ACT ability during your Main phase.');
+  const selected=activatedAbilities(card)[index];
+  if(!selected?.action)throw Error('This ACT ability requires manual resolution.');
+  const action=selected.action,q=z(s,ref.p),label=card.code||card.name;
+  if(q.stock.length<action.stock||action.rest&&instance.orientation!=='stand')throw Error('You cannot pay the full cost of this ability.');
+  for(let i=0;i<action.stock;i++)take(s,{p:ref.p,z:'stock',uid:q.stock.at(-1).uid},'waiting');
+  if(action.rest)instance.orientation='rest';
+  if(action.sacrifice)take(s,ref,'waiting');
+  log(s,'Player '+(ref.p+1)+' activated '+label+' · '+selected.text);
+  const tasks=[];
+  if(['draw','draw-discard'].includes(action.kind))tasks.push({type:'draw',p:ref.p});
+  if(action.kind!=='draw')tasks.push({type:'act-effect',p:ref.p,action,label});
+  prepend(s,...tasks,check(s,'After activated ability'));
+  run(s);
+ }
+ return {ruleInterrupts,stats,beginAttack,respond,finishReveal,run,advance,afterMutation,endAttacks,damage,drawCards,counters,allStage,inst,activate,manualEffect:effect,auto};
 }

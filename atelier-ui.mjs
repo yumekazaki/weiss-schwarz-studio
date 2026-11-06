@@ -156,6 +156,7 @@ export function mountAtelier(api){
   const s=api.state(),instance=api.instance(ref);if(!instance)return;const readable=api.readable(ref),card=readable?api.card(instance.id):null,choices=cardContext({match:s.match,ref,card,englishAbility:card?api.englishAbility(card.id):''}).map(c=>({...c,hint:s.match.auto?.enabled&&c.key.startsWith('attack-')?'Guided attack: calculate soul, resolve triggers, responses and damage.':c.hint,run:()=>runContext(c.key,ref)}));
   choices.push({label:'Inspect / search this zone',run:()=>api.openPile(ref.p,ref.z)});
   if(readable)choices.unshift({label:'⤢ Pin card details',run:()=>api.inspect(instance.id)});
+  if(readable&&api.abilities(ref).length)choices.unshift({label:'Activate ability…',run:()=>api.openAbilities(ref,revealManual)});
   const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock'].includes(to));
   const moveOption=([to,position,label])=>({label,run:()=>api.move([ref],ref.p,to,position)});
   choices.push(...manualMoves.map(moveOption));

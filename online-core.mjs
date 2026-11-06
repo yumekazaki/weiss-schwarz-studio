@@ -80,6 +80,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  const before=copy(s);
  if(type==='respond'){const c=a.choice;need(args.choice===c.id,'That decision has already resolved.');if(c.kind==='encore-offer'&&args.value==='manual')s.onlineManualOwner=p;r.respond(s,args.choice,String(args.value));}
  else if(type==='advance')r.advance(s);
+ else if(type==='activate'){checkOwn(args.ref);need(Number.isInteger(args.index)&&args.index>=0,'Choose an activated ability.');r.activate(s,args.ref,args.index);}
  else if(type==='attack'){checkOwn(args.ref);need(['frontal','side','direct'].includes(args.attackType),'Invalid attack type.');r.beginAttack(s,args.ref,args.attackType);}
  else if(type==='clock'){need(s.phase===2&&s.clockedTurn!==s.turn,'Clock only once during clock phase.');const c=checkOwn(args.ref);need(args.ref.z==='hand','Choose a hand card.');move(s,[args.ref],p,'clock');s.clockedTurn=s.turn;r.drawCards(s,p,2);s.onlineEpoch++;}
  else if(type==='play'){need([3,4].includes(s.phase),'Cards are played during main or climax phase.');const c=checkOwn(args.ref),d=catalog.get(c.id);need(args.ref.z==='hand','Play a card from hand.');need(Number(d.level)<=own.level.length,'Card level is too high.');need(!+d.level||[...own.clock,...own.level].some(c=>catalog.get(c.id)?.color===d.color),'Missing matching color in clock/level.');const cost=Number(d.cost)||0;need(cost<=own.stock.length,'Not enough stock.');

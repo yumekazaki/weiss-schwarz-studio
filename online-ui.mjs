@@ -1,6 +1,7 @@
 import {onlineConfig as config} from './online-config.mjs';
 import {phases,zones} from './engine.mjs';
 import {cardMoveOptions,facingPosition} from './context-actions.mjs';
+import {activatedAbilities,parseAbility} from './automation.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>structuredClone(x),stage=['center-left','center-middle','center-right','back-left','back-right'];
 export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supabase/supabase-js@2.81.1?bundle')){
@@ -181,6 +182,8 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    }
    if(!own)return showCardActions(anchor,api.name(c.id)+' · '+api.zoneName(ref.z),actions,more);
    const current=s.active===p&&!s.auto.attack&&!s.auto.choice&&!s.auto.reveal&&!s.auto.paused&&!s.manualWindow&&!s.undoRequest;
+   const abilities=activatedAbilities(info);
+   if(abilities.length)actions.push(['Activate ability…',()=>openAbilities(ref,info,abilities,current)]);
    const manualAllowed=!s.undoRequest&&!s.auto.reveal&&(s.manualWindow?.p===p||s.choiceOwner===p&&['manual-counter','encore-manual','unknown-icon'].includes(s.auto.choice?.kind)||!s.manualWindow&&!s.auto.attack&&!s.auto.choice&&!s.auto.paused&&s.choiceOwner==null);
    if(ref.z==='hand'&&current){
     if(s.phase===2&&s.clockedTurn!==s.turn)actions.push(['Clock this card and draw two',()=>act('clock',{ref})]);
@@ -221,6 +224,24 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    }
   }
   showCardActions(anchor,api.name(c.id)+' · '+api.zoneName(ref.z),actions,more);
+ }
+ function openAbilities(ref,card,abilities,current){
+  const s=room.state,choice=s.auto.choice;
+  const backup=choice?.kind==='counter'&&choice.options.find(o=>o.value===ref.uid&&o.backup);
+  const canActivate=current&&s.phase===3&&stage.includes(ref.z);
+  show('<h2>Activate ability</h2><p>Choose an ACT ability. Automatic actions pay the printed cost and ask for targets when needed.</p>'+abilities.map(({text,action},i)=>{
+   const auto=action||backup&&parseAbility(text)?.kind==='backup';
+   const unavailable=action&&!canActivate;
+   return '<p>'+esc(text)+'</p><button data-online-ability="'+i+'" '+(unavailable?'disabled':'')+'>'+(unavailable?'Available in your Main phase':auto?'Activate':'Resolve manually')+'</button>';
+  }).join(''));
+  document.querySelectorAll('[data-online-ability]').forEach(button=>button.onclick=()=>{
+   const selected=abilities[+button.dataset.onlineAbility];
+   $('#dialog').close();
+   if(selected.action)return act('activate',{ref,index:selected.index});
+   if(backup&&parseAbility(selected.text)?.kind==='backup')return act('respond',{choice:choice.id,value:backup.value});
+   const reason=(card.code+' · '+selected.text).slice(0,400);
+   return act('effect-request',{player:room.seat,reason});
+  });
  }
  function chooseStage(fn,positions=stage){show('<h2>Choose a stage position</h2>'+(positions.length?positions.map((z,i)=>'<button data-stage-choice="'+i+'">'+esc(api.zoneName(z))+'</button>').join(''):'<p>There are no open stage positions. Move a character off the stage first.</p>'));document.querySelectorAll('[data-stage-choice]').forEach(b=>b.onclick=()=>{$('#dialog').close();fn(positions[+b.dataset.stageChoice]);});}
  async function openPile(p,z,mode){const own=p===room.seat,privateZone=['deck','stock'].includes(z);let cards=room.state.players[p].zones[z];peek=null;if(own&&z==='deck'&&mode!=='search')return openOwnDeck(p,cards.length);if(own&&privateZone&&room.state.manualWindow?.p!==room.seat){show('<h2>'+esc(api.zoneName(z))+'</h2><p>'+cards.length+' cards. A private search requires a manual effect window and is visible to both players.</p><button id="begin-private-search">Begin manual search</button>');$('#begin-private-search').onclick=async()=>{$('#dialog').close();await act('effect-request',{player:room.seat,reason:'Privately search / inspect own '+api.zoneName(z)+' for a card effect'});if(room.state.manualWindow?.p===room.seat)openPile(p,z,mode);};return;}if(own&&privateZone){try{cards=(await call('peek',{room:room.id,player:p,zone:z})).cards;peek={p,z,cards};}catch(e){return api.toast(e.message);}}const masked=cards.every(c=>c.hidden);show('<h2>'+esc(room.names[p])+' · '+esc(api.zoneName(z))+'</h2><p>'+cards.length+' cards'+(z==='deck'?' · search view is sorted, not deck order':' · bottom to top')+'</p><label>Search pile<input id="online-pile-search"></label><div class="toolbar">'+(own?'<button id="online-select-all">Select all visible</button><button id="online-selected-tools">Manual actions ('+selections.length+')</button>':'')+'</div><div class="pile-grid" id="online-pile-grid"></div>');function fill(){const q=$('#online-pile-search').value.toLowerCase();$('#online-pile-grid').innerHTML=cards.filter(c=>!q||!c.hidden&&api.name(c.id).toLowerCase().includes(q)).map(c=>'<div class="pile-card"><button data-pile-card="'+esc(c.uid)+'">'+(c.hidden?'<span class="card-back">W</span>':api.image(c.id))+'</button>'+(!c.hidden?'<button data-pile-inspect="'+esc(c.id)+'">Inspect</button>':'')+'</div>').join('');document.querySelectorAll('[data-pile-card]').forEach(b=>b.onclick=()=>{const c=cards.find(c=>c.uid===b.dataset.pileCard);if(c.hidden)return;cardMenu({p,z,uid:c.uid},b);});document.querySelectorAll('[data-pile-inspect]').forEach(b=>b.onclick=()=>api.inspect(b.dataset.pileInspect));}fill();$('#online-pile-search').oninput=fill;if(own){$('#online-selected-tools').onclick=manualTools;$('#online-select-all').onclick=()=>{selections=cards.filter(c=>!c.hidden).map(c=>({p,z,uid:c.uid}));$('#online-selected-tools').textContent='Manual actions ('+selections.length+')';};}}
