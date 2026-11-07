@@ -1,0 +1,221 @@
+.online-lobby{padding:30px;max-width:650px;margin:auto}.online-lobby label{display:block;margin:20px 0}.cloud-deck{display:flex;align-items:center;gap:8px;margin:10px 0}.cloud-deck span{flex:1}.error{color:#ffb3b3}#account-form label,#recovery-form label{display:block;margin:20px 0}.online-topbar{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:8px 0}.online-topbar details{position:relative}.online-topbar summary{padding:10px;background:#182f44;border:1px solid #99b4cb66;border-radius:8px;cursor:pointer}.online-controls{position:absolute;z-index:40;top:100%;left:0;padding:15px;width:290px;background:#102335;border:1px solid #accdbb;box-shadow:0 15px 45px #0009;border-radius:10px}.online-controls button{display:block;width:100%;margin:5px 0}.online-log{max-height:220px;overflow:auto;font-size:11px}.online-playmat{position:relative;isolation:isolate;background:#86b77b url('art/scenes/sunlit-meadow.jpg') center/cover;border:1px solid #b6e9d2;border-radius:18px;padding:12px;min-width:900px;display:grid;grid-template-rows:minmax(310px,1fr) 65px minmax(310px,1fr);gap:9px;box-shadow:0 20px 70px #0005}.online-playmat:before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,#fff7d51a,transparent 50%,#ddffa41a);pointer-events:none;animation:online-wind 12s ease-in-out infinite alternate;z-index:-1}.online-player{display:grid;grid-template-columns:23% 1fr 18%;grid-template-rows:30px 1fr;gap:8px 14px;border:1px solid #e8e6c8a3;border-radius:14px;padding:12px;background:#1e4c4320;min-height:0}.online-player h3{grid-column:1/-1;margin:0;display:flex;justify-content:space-between;font-size:13px;color:#f5fff5;text-shadow:0 1px 4px #102514}.online-left{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:6px;min-height:0}.online-right{display:grid;grid-template-rows:1fr 1fr;gap:8px}.online-zone{min-height:0!important;text-align:left;background:#102e3cda!important;color:#f0f7ee;padding:8px;overflow:hidden}.online-zone span{display:block;font-size:9px}.online-zone b{color:#e6c995;display:block;font-size:19px}.online-zone img{position:absolute;right:8px;bottom:5px;height:48px}.online-center{display:grid;grid-template-rows:1fr 1fr 70px;gap:8px;min-height:0}.online-stage-row{display:flex;justify-content:center;gap:28px;min-height:0}.online-stage{width:90px;min-height:0!important;position:relative;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:#123540b8!important;overflow:visible!important}.online-stage>span{font-size:8px;color:#e6f4ec}.online-stage small{font-size:8px;position:absolute;bottom:4px;background:#102532dc;padding:2px}.online-stage .online-card{height:65px;width:48px}.online-card{position:relative;display:block;padding:0;background:none;border:0;flex-shrink:0}.online-card img{height:100%;width:100%;object-fit:contain;border-radius:4px}.online-card.rest img{transform:rotate(90deg)}.online-card.reverse img{transform:rotate(180deg)}.online-card.selected,.pile-card button.selected{outline:3px solid #ffe3a2}.online-zoom{position:absolute;right:-5px;top:16px;padding:2px 6px;z-index:2}.online-markers{position:absolute;bottom:-8px;left:8px;font-size:7px;padding:2px 5px;z-index:2}.online-hand{display:flex;align-items:center;gap:6px;overflow:auto;border-top:1px solid #e4ebd944;padding-top:6px}.online-hand>div{height:62px;position:relative;flex-shrink:0}.online-hand .online-card{height:62px;width:45px}.online-hand .card-back{height:58px;width:43px}.online-hand>button{font-size:9px;padding:4px}.online-hand>small{font-size:8px;color:white}.online-hand .online-zoom{top:auto;bottom:0;right:0;font-size:11px}.online-phase{margin:0!important;padding:9px 18px!important;background:#163d42ee!important;min-height:0}.online-phase strong,.online-phase small{display:block}.online-phase strong{font:22px system-ui}.online-phase small{font-size:9px}.online-phase button{padding:10px}#online-waiting{font-size:12px;color:#f5e5be}#online-content{overflow-x:auto}#online-prompt{position:relative;z-index:3;background:#172d40;border:1px solid #c3d9cb66;border-radius:10px;padding:12px;margin:8px 0}#online-prompt:empty{display:none}.online-choices{display:flex;gap:10px;overflow:auto}.online-choices button{max-width:220px;flex-shrink:0}.online-choices img{display:block;height:110px;margin:auto}.online-check{position:fixed;inset:10% auto auto 50%;transform:translateX(-50%);background:#102333f2;border:1px solid #ddcf9a;box-shadow:0 10px 90px #000a;border-radius:15px;padding:15px;z-index:100;pointer-events:none;text-align:center}.online-check img{height:min(48vh,340px)}.online-check h3{margin:0 0 10px}.online-fullscreen{position:fixed!important;inset:0!important;z-index:1000;background:#10212b;overflow:auto;padding:0 10px!important}.online-fullscreen .online-topbar{height:43px;padding:4px 0}.online-fullscreen .online-playmat{height:calc(100dvh - 47px);box-sizing:border-box;grid-template-rows:minmax(0,1fr) 60px minmax(0,1fr);padding:10px;min-width:900px}.online-fullscreen #online-prompt:not(:empty){position:absolute;left:25%;right:25%;top:45px;max-height:50vh;overflow:auto;z-index:50}.online-fullscreen .online-player{padding:10px}.online-fullscreen .online-check{position:fixed}#online-connection{font-size:11px;color:#bdd4cf}@keyframes online-wind{from{opacity:.3;transform:translateX(-6px)}to{opacity:.8;transform:translateX(6px)}}@media(max-width:950px){#online-content{margin:0 -10px}.online-topbar{min-width:0}.online-topbar summary{font-size:10px}.online-topbar>span{max-width:110px}.cloud-deck{flex-wrap:wrap}}@media(prefers-reduced-motion:reduce){.online-playmat:before{animation:none}}
+
+#home .title-topline{justify-content:flex-start;gap:10px}#home .title-secondary{margin-left:auto}#home #title-account{color:#f2f5fb;background:#071827d9;border:1px solid #ffffff55;padding:10px 15px;border-radius:5px;white-space:nowrap}#account-deck-rail{margin-top:1rem}#account-deck-rail .saved-item{margin-bottom:.75rem}#account-deck-rail .saved-item button{margin-top:.35rem}@media(max-width:480px){#home #title-account{padding:8px;font-size:11px}#home .title-secondary summary{padding:8px;font-size:11px}}
+
+.room-list-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0;padding:12px;border:1px solid #9bbbd446;border-radius:9px;background:#102335aa}
+.room-list-row small{color:#b9cad9}
+.room-list-row .toolbar{margin:0;justify-content:flex-end}
+@media(max-width:480px){.room-list-row{flex-wrap:wrap}.room-list-row .toolbar{justify-content:flex-start}}
+#online .online-card-actions,
+#dialog .online-card-actions {
+  position: fixed;
+  z-index: 1100;
+  width: min(280px, calc(100vw - 16px));
+  max-height: min(56vh, 420px);
+  overflow: auto;
+  padding: 9px;
+  border: 1px solid #86acba;
+  border-radius: 9px;
+  background: #102335;
+  box-shadow: 0 12px 34px #0008;
+}
+.online-card-actions b,.online-card-actions summary { display: block; padding: 7px; }
+.online-card-actions summary { cursor: pointer; color: #efce93; }
+.online-card-actions button { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 7px 9px; }
+
+.online-fullscreen #online-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.online-fullscreen .online-topbar { flex: 0 0 43px; }
+.online-fullscreen #online-prompt:not(:empty) {
+  position: relative;
+  inset: auto;
+  align-self: center;
+  max-height: 24vh;
+  margin: 4px 0;
+  padding: 6px 12px;
+}
+.online-fullscreen #online-prompt h3,.online-fullscreen #online-prompt p { margin: 4px 0; }
+.online-fullscreen .online-playmat { height: auto; flex: 1 0 460px; }
+.online-fullscreen .online-center { grid-template-rows: minmax(0,1fr) minmax(0,1fr) 70px; }
+.online-fullscreen .online-stage {
+  height: 100%;
+  width: auto;
+  max-width: 29%;
+  aspect-ratio: 0.8;
+  padding: 0;
+}
+.online-fullscreen .online-stage .online-card { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; border-radius: inherit; }
+#online.online-fullscreen .online-stage .online-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  float: none;
+  object-fit: cover;
+}
+.online-fullscreen .online-stage .online-card.rest img { transform: rotate(90deg) scale(.8); }
+.online-fullscreen .online-stage>span,.online-fullscreen .online-stage>small {
+  position: absolute;
+  z-index: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #102532dc;
+  pointer-events: none;
+}
+.online-fullscreen .online-stage>span { top: 2px; }
+.online-fullscreen .online-stage>small { bottom: 4px; }
+
+/* Keep the 83px Practice stage rows and the existing hand and pile tracks. */
+.table-focus #table .stage-zone {
+  width: 90px;
+  height: 83px;
+  box-sizing: border-box;
+  padding: 0;
+}
+.table-focus #table .stage-zone img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+}
+.table-focus #table .stage-zone img.rest { transform: rotate(90deg); }
+.table-focus #table .stage-zone>.zone-label {
+  position: relative;
+  z-index: 1;
+  background: #102532dc;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.live-power { color: #fff3cc; font-size: 1.15em; font-variant-numeric: tabular-nums; }
+.ability-prompt-text {
+  padding: 10px 12px;
+  border-left: 3px solid #eac68b;
+  background: #243b51;
+  color: #fff5e6;
+  line-height: 1.5;
+}
+.resolution-choices [data-response] img {
+  display: block;
+  height: 95px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0 auto 4px;
+}
+#opening-hand {
+  width: min(900px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: clamp(12px, 3vw, 28px);
+}
+#opening-hand h2 { margin: 0 0 8px; }
+.mulligan-hand {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 8px;
+}
+.mulligan-card {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 5px;
+  border: 2px solid transparent;
+  min-width: 0;
+}
+.mulligan-card img { width: 100%; height: auto; display: block; }
+.mulligan-card span { font-size: .8rem; overflow-wrap: anywhere; }
+.mulligan-card small { color: #e5d4ae; }
+.mulligan-card[aria-pressed=true] { border-color: #ffd07c; background: #4d392e; }
+[data-pile$="|stock"] .zone-count,
+[data-online-pile$="|stock"] b {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 1.5em;
+  padding: 2px 5px;
+  border: 1px solid #e9c985;
+  border-radius: 5px;
+  background: #15283e;
+  color: #fff1c8;
+  font: bold 16px/1.15 system-ui,sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.ability-zone-picker { width: min(900px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+.ability-prompt-reopen { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 1300; box-shadow: 0 6px 24px #0008; }
+.ability-prompt-reopen[hidden] { display: none; }
+body.table-focus #dialog[data-kind="hand"],
+body:has(#online.online-fullscreen) #dialog[data-kind="hand"] {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: clamp(16px,2vw,32px);
+  border-radius: 0;
+  overflow: auto;
+}
+#dialog[data-kind="hand"] #dialog-body { min-width: 0; }
+body.table-focus #dialog[data-kind="hand"] .pile-grid,
+body:has(#online.online-fullscreen) #dialog[data-kind="hand"] .pile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(240px,100%),1fr));
+  gap: 20px;
+  align-items: start;
+}
+body.table-focus #dialog[data-kind="hand"] .pile-card,
+body:has(#online.online-fullscreen) #dialog[data-kind="hand"] .pile-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 380px;
+  justify-self: center;
+}
+body.table-focus #dialog[data-kind="hand"] .pile-card > button:first-child,
+body:has(#online.online-fullscreen) #dialog[data-kind="hand"] .pile-card > button:first-child {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: clamp(260px,52vh,560px);
+  padding: 6px;
+}
+body.table-focus #dialog[data-kind="hand"] .pile-card img,
+body:has(#online.online-fullscreen) #dialog[data-kind="hand"] .pile-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+.ability-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(100px,1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
+.ability-picker-grid button { display: grid; align-content: start; gap: 5px; padding: 5px; min-width: 0; }
+.ability-picker-grid img { display: block; height: 120px; width: 100%; object-fit: contain; }
+.ability-picker-grid span { font-size: .8rem; overflow-wrap: anywhere; }
+body.table-focus #toast { z-index: 1200; }
+body:has(#online.online-fullscreen) #toast { z-index: 1200; }
+@media (max-width: 480px) {
+  .mulligan-hand { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+
+.zone.eligible-ability-target {
+  outline: 3px solid #ffdb83;
+  outline-offset: 2px;
+  box-shadow: 0 0 14px #ffce7290;
+  cursor: pointer;
+}
