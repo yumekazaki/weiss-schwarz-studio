@@ -1,6 +1,6 @@
 import {onlineConfig as config} from './online-config.mjs';
 import {noSideAttack,phases,zones,playFromHandError} from './engine.mjs';
-import {cardMoveOptions,facingPosition} from './context-actions.mjs';
+import {cardMoveOptions,facingPosition,powerAdjustments} from './context-actions.mjs';
 import {abilityLines,activatedAbilities,parseAbility} from './automation.mjs';
 import {modifierBreakdown,mountAbilityPicker,stageTargetOptions} from './resolution-ui.mjs';
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -249,6 +249,9 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    }
    if(manualAllowed){
     const run=(action,options={})=>runCardEffect(ref,action,options);
+    if(isStage&&info?.type==='Character')actions.push(...powerAdjustments.map(option=>[
+     option.label,()=>run('manual-modifier',{stat:'power',amount:option.amount,duration:option.duration,label:option.label+' power'})
+    ]));
     const movement=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock'].includes(to));
     const move=([to,position,label])=>[label,()=>run('manual-move',{to,position})];
     actions.push(...movement.map(move));

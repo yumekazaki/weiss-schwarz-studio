@@ -60,7 +60,7 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  if(type==='pause'){need(!s.manualWindow,'A manual effect is already open.');s.manualWindow={p,by:p,reason:'Paused for card effects / manual correction',previousPaused:!!a.paused};a.paused=true;event(s,p,type,args,original);return s;}
  const decision=choiceOwner(s),manualChoice=['manual-counter','encore-manual','unknown-icon','auto-manual'].includes(a.choice?.kind),windowOwner=s.manualWindow?.p;
  if(type==='card-effect'){
-  need(['manual-move','manual-orient','manual-reveal','manual-flip'].includes(args.action),'Invalid card action.');
+  need(['manual-move','manual-orient','manual-reveal','manual-flip','manual-modifier'].includes(args.action),'Invalid card action.');
   checkOwn(args.ref);
   if(s.manualWindow || a.choice)return reduce(original,p,args.action,{...args,refs:[args.ref]},catalog);
   need(!a.reveal&&!a.attack&&!a.queue.length&&!a.paused,'Finish the current resolution or open a manual effect window first.');

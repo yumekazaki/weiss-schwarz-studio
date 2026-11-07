@@ -22,6 +22,18 @@ function modifierRule(match,kind,extra={},group=1){
 const hasTrait=(card,trait)=>(card?.attributes||[]).some(value=>value.replace(/^《|》$/g,'')===trait);
 export function parseAbility(text){
  const t=clean(text).split(/\s*\(: When this card triggers|\s+（\[\[[^\]]+\]\]：このカードがトリガーした時/)[0].trim();let m;
+ if((m=t.match(/^【CONT】 This card gets \+(\d+) power for each of your (other )?(?:《([^》]+)》 )?characters\.$/i)))
+  return {kind:'self',condition:'always',countZone:'stage',countOther:!!m[2],countTrait:m[3],powerPerCount:+m[1]};
+ if((m=t.match(/^【永】 (他の)?あなたの(?:《([^》]+)》の)?キャラ1枚につき、このカードのパワーを＋(\d+)。$/)))
+  return {kind:'self',condition:'always',countZone:'stage',countOther:!!m[1],countTrait:m[2],powerPerCount:+m[3]};
+ if((m=t.match(/^【CONT】 If (your|your opponent's) (hand|stock|clock|memory) has (\d+) or (more|less|fewer) cards?, this card gets (.+)\.$/i)))
+  return modifierRule(m,'self',{condition:'count',countZone:m[2].toLowerCase(),countOpponent:m[1].toLowerCase()!=='your',[m[4].toLowerCase()==='more'?'minimum':'maximum']:+m[3]},5);
+ if((m=t.match(/^【永】 (あなた|相手)の(手札|ストック|クロック|思い出)が(\d+)枚(以上|以下)なら、このカードの(.+)。$/)))
+  return modifierRule(m,'self',{condition:'count',countZone:({手札:'hand',ストック:'stock',クロック:'clock',思い出:'memory'})[m[2]],countOpponent:m[1]==='相手',[m[4]==='以上'?'minimum':'maximum']:+m[3]},5);
+ if((m=t.match(/^【CONT】 If you have (\d+) or more (other )?《([^》]+)》 characters, this card gets (.+)\.$/i)))
+  return modifierRule(m,'self',{condition:'count',countZone:'stage',countOther:!!m[2],countTrait:m[3],minimum:+m[1]},4);
+ if((m=t.match(/^【永】 (他の)?あなたの《([^》]+)》のキャラが(\d+)枚(以上|以下)なら、このカードの(.+)。$/)))
+  return modifierRule(m,'self',{condition:'count',countZone:'stage',countOther:!!m[1],countTrait:m[2],[m[4]==='以上'?'minimum':'maximum']:+m[3]},5);
  if((m=t.match(/^【(?:AUTO|自)】 (?:When this card (?:attacks|is placed on the stage from your hand), this card gets \+X power until end of turn\. X is equal to the number of (other )?《([^》]+)》 characters you have [×x](\d+)\.|このカードが(?:アタックした|手札から舞台に置かれた)時、そのターン中、このカードのパワーを＋Ｘ。Ｘは(他の)?あなたの《([^》]+)》のキャラの枚数×(\d+)に等しい。)$/i)))
   return {kind:/attacks|アタックした/.test(t)?'attack-self':'entry-self',zone:'stage',countOther:!!(m[1]||m[4]),countTrait:m[2]||m[5],powerPerCharacter:+(m[3]||m[6])};
  if((m=t.match(/^【CONT】 (During your (opponent's )?turn, )?all of your (other )?(?:《([^》]+)》 )?characters( with markers)? get (.+)\.$/i)))
@@ -269,6 +281,11 @@ export function createResolver(card){
   effect(s,ref,{power:t.powerPerCharacter?count*t.powerPerCharacter:t.power,soul:t.soul},t.label,'turn',until);
  }
  function turnCondition(s,p,condition){return !condition||condition==='always'||condition==='own'&&s.active===p||condition==='opponent'&&s.active!==p;}
+ function continuousCount(s,source,rule){
+  const p=rule.countOpponent?1-source.p:source.p;
+  const cards=rule.countZone==='stage'?allStage(s,p).map(ref=>inst(s,ref)).filter(c=>!c.faceDown&&get(c.id)?.type==='Character'):z(s,p)[rule.countZone]||[];
+  return cards.filter(c=>(!rule.countOther||c.uid!==source.uid)&&(!rule.countTrait||hasTrait(get(c.id),rule.countTrait))).length;
+ }
  function stats(s,r){const c=inst(s,r),info=get(c?.id),out={soul:Number(info?.soul)||0,power:Number(info?.power)||0,level:Number(info?.level)||0,breakdown:[],unsupported:[]};if(!c)return {...out,soul:0,power:0};out.breakdown.push({label:'Printed',soul:out.soul,power:out.power});
   const active=auto(s).effects.filter(e=>e.uid===c.uid&&(e.expires==='persistent'||(e.untilTurn??e.turn)>=s.turn));
   out.level+=active.reduce((sum,e)=>sum+(e.level||0),0);
@@ -281,8 +298,12 @@ export function createResolver(card){
     let applies=false;
     if(a.kind==='global')applies=(a.opponent?!sameSide:sameSide)&&(!a.other||source.uid!==c.uid)&&turnCondition(s,source.p,a.condition)&&(!a.trait||hasTrait(info,a.trait))&&(!a.markers||z(s,r.p)['markers:'+r.z]?.length>0);
     if(a.kind==='self'&&source.uid===c.uid)applies=turnCondition(s,r.p,a.condition)||a.condition==='middle'&&r.z==='center-middle'||a.condition==='others'&&allStage(s,r.p).filter(other=>other.uid!==r.uid&&!inst(s,other).faceDown&&hasTrait(get(inst(s,other).id),a.trait)).length>=a.minimum;
+    if(a.kind==='self'&&source.uid===c.uid&&a.condition==='count'){
+     const count=continuousCount(s,source,a);
+     applies=(a.minimum===undefined||count>=a.minimum)&&(a.maximum===undefined||count<=a.maximum);
+    }
     if(a.kind==='assist'&&sameSide&&source.z.startsWith('back-')&&(a.minimumLevel===undefined||out.level>=a.minimumLevel))applies=source.z==='back-left'?['center-left','center-middle'].includes(r.z):['center-middle','center-right'].includes(r.z);
-    if(applies){const power=(a.power||0)+(a.perLevel||0)*Math.max(0,out.level);out.soul+=a.soul||0;out.power+=power;out.breakdown.push({label:data.code+' · '+text,soul:a.soul||0,power,expires:'continuous'});}
+    if(applies){const power=(a.power||0)+(a.perLevel||0)*Math.max(0,out.level)+(a.powerPerCount||0)*(a.powerPerCount?continuousCount(s,source,a):0);out.soul+=a.soul||0;out.power+=power;out.breakdown.push({label:data.code+' · '+text,soul:a.soul||0,power,expires:'continuous'});}
    }
   }
   for(const e of active){out.soul+=e.soul||0;out.power+=e.power||0;out.breakdown.push(e);}return out;

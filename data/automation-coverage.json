@@ -1,6 +1,6 @@
 {
   "rules": "English v2.10, 2025-09-17",
-  "supportedAbilityRecords": 37165,
+  "supportedAbilityRecords": 40240,
   "unsupportedTriggers": [
     "FOCUS",
     "BUSHI",
@@ -13,14 +13,14 @@
   "notes": "Counts include alternate printings. Automatic means the complete printed ability matches a supported plan, not that every interaction has been verified. Timing-only and manual entries require manual handling. See each card’s Ability automation coverage for its individual lines.",
   "printedAbilityEntriesByLanguage": {
     "EN": {
-      "automatic": 13094,
+      "automatic": 13678,
       "timing-only": 13304,
-      "manual": 27276
+      "manual": 26692
     },
     "JP": {
-      "automatic": 24071,
+      "automatic": 26562,
       "timing-only": 25870,
-      "manual": 58804
+      "manual": 56313
     }
   },
   "catalogCardRecords": 98927
