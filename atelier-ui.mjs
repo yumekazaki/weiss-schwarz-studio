@@ -1,4 +1,4 @@
-import {cardContext,cardMoveOptions,powerAdjustments,stagePositions} from './context-actions.mjs';
+import {cardContext,cardMoveOptions,statAdjustments,stagePositions} from './context-actions.mjs';
 
 const $=s=>document.querySelector(s),all=s=>[...document.querySelectorAll(s)],esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const phaseNames=['Stand','Draw','Clock','Main','Climax','Attack','End'];
@@ -159,7 +159,7 @@ export function mountAtelier(api){
   if(readable)choices.unshift({label:'⤢ Pin card details',run:()=>api.inspect(instance.id)});
   if(readable)choices.unshift({label:'Activate ability…',run:()=>api.openAbilities(ref,revealManual)});
   if(readable&&card?.type==='Character'&&stagePositions.includes(ref.z)&&!(s.match.practiceBot&&ref.p===1)){
-   choices.push(...powerAdjustments.map(option=>({label:option.label,hint:'Manual power adjustment',run:()=>api.gainPower(ref,option.amount,option.duration)})));
+   choices.push(...statAdjustments.map(option=>({label:option.label,hint:'Manual '+option.stat+' adjustment',run:()=>api.gainStat(ref,option.stat,option.amount,option.duration)})));
   }
   const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock'].includes(to));
   const moveOption=([to,position,label])=>({label,run:()=>api.move([ref],ref.p,to,position)});

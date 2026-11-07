@@ -1,10 +1,11 @@
 import {noSideAttack} from './engine.mjs';
 export const stagePositions=['center-left','center-middle','center-right','back-left','back-right'];
-export const powerAdjustments=[
- {label:'Gain 1000',amount:1000,duration:'persistent'},
- {label:'Gain 1000 until end of turn',amount:1000,duration:'turn'},
- {label:'Gain 500',amount:500,duration:'persistent'},
- {label:'Gain 500 until end of turn',amount:500,duration:'turn'},
+export const statAdjustments=[
+ {label:'Gain +1 soul until end of turn',stat:'soul',amount:1,duration:'turn'},
+ {label:'Gain 1000',stat:'power',amount:1000,duration:'persistent'},
+ {label:'Gain 1000 until end of turn',stat:'power',amount:1000,duration:'turn'},
+ {label:'Gain 500',stat:'power',amount:500,duration:'persistent'},
+ {label:'Gain 500 until end of turn',stat:'power',amount:500,duration:'turn'},
 ];
 export const facingPosition=z=>({'center-left':'center-right','center-middle':'center-middle','center-right':'center-left'})[z];
 export const cardMoveOptions=[
