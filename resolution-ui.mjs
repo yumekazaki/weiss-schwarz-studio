@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pickerKinds=new Set(['ability-search','ability-look-target','ability-look-order','ability-look-place','ability-salvage','entry-stock','ability-pay-card','ability-hand-move','ability-resonate','level']);
+const pickerKinds=new Set(['ability-offer','ability-search','ability-look-target','ability-look-order','ability-look-place','ability-salvage','entry-stock','ability-pay-card','ability-hand-move','ability-resonate','level']);
 export function stageTargetOptions(choice){
  return (choice?.options||[]).filter(o=>!o.disabled&&o.ref&&/^(center|back)-/.test(o.ref.z));
 }
@@ -14,19 +14,29 @@ export function mountAbilityPicker(parent,api){
  dialog.className='ability-zone-picker';
  dialog.setAttribute('aria-label','Choose a card for the current ability');
  parent.append(dialog);
+ const reopen=document.createElement('button');
+ reopen.type='button';
+ reopen.className='ability-prompt-reopen primary';
+ reopen.hidden=true;
+ parent.append(reopen);
+ reopen.onclick=()=>{reopen.hidden=true;dialog.showModal();};
+ dialog.addEventListener('close',()=>{reopen.hidden=!displayed;});
  let displayed;
  return (choice,respond,scope)=>{
   if(!choice||!pickerKinds.has(choice.kind)){
    if(dialog.open)dialog.close();
    displayed=null;
+   reopen.hidden=true;
    return;
   }
   const key=scope+'|'+choice.id;
   if(key===displayed)return;
   displayed=key;
-  dialog.innerHTML='<h2>'+esc(choice.title)+'</h2><div class="ability-picker-grid">'+choice.options.filter(o=>o.card).map((o,i)=>
+  reopen.textContent=choice.kind==='ability-offer'?'Resolve effect…':'Continue card selection…';
+  reopen.hidden=true;
+  dialog.innerHTML='<h2>'+esc(choice.title)+'</h2>'+(choice.abilityText?'<p class="ability-prompt-text">'+esc(choice.abilityText)+'</p>':'')+'<div class="ability-picker-grid">'+choice.options.filter(o=>o.card).map((o,i)=>
    '<button type="button" data-picker-card="'+i+'" '+(o.disabled?'disabled':'')+'>'+api.image(o.card)+'<span>'+esc(o.label)+'</span></button>').join('')+'</div><div class="toolbar">'+
-   choice.options.filter(o=>!o.card).map((o,i)=>'<button type="button" data-picker-other="'+i+'">'+esc(o.label)+'</button>').join('')+
+   choice.options.filter(o=>!o.card).map((o,i)=>'<button type="button" data-picker-other="'+i+'" '+(o.disabled?'disabled':'')+'>'+esc(choice.kind==='ability-offer'&&o.value==='resolve'?'Resolve effect':o.label)+'</button>').join('')+
    '<button type="button" data-picker-board>Review board</button></div><p data-picker-status role="status"></p>';
   for(const [selector,options] of [['data-picker-card',choice.options.filter(o=>o.card)],['data-picker-other',choice.options.filter(o=>!o.card)]]){
    dialog.querySelectorAll('['+selector+']').forEach(button=>button.onclick=async()=>{
