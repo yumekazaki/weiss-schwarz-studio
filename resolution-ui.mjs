@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pickerKinds=new Set(['ability-offer','ability-search','ability-look-target','ability-look-order','ability-look-place','ability-salvage','entry-stock','ability-pay-card','ability-hand-move','ability-resonate','level']);
+const pickerKinds=new Set(['ability-offer','ability-count','ability-clock-choice','trigger-order','ability-search','ability-look-target','ability-look-order','ability-look-place','ability-salvage','entry-stock','ability-pay-card','ability-hand-move','ability-resonate','level']);
 export function stageTargetOptions(choice){
  return (choice?.options||[]).filter(o=>!o.disabled&&o.ref&&/^(center|back)-/.test(o.ref.z));
 }
@@ -32,7 +32,7 @@ export function mountAbilityPicker(parent,api){
   const key=scope+'|'+choice.id;
   if(key===displayed)return;
   displayed=key;
-  reopen.textContent=choice.kind==='ability-offer'?'Resolve effect…':'Continue card selection…';
+  reopen.textContent=choice.kind==='ability-offer'?'Resolve effect…':'Continue effect…';
   reopen.hidden=true;
   dialog.innerHTML='<h2>'+esc(choice.title)+'</h2>'+(choice.abilityText?'<p class="ability-prompt-text">'+esc(choice.abilityText)+'</p>':'')+'<div class="ability-picker-grid">'+choice.options.filter(o=>o.card).map((o,i)=>
    '<button type="button" data-picker-card="'+i+'" '+(o.disabled?'disabled':'')+'>'+api.image(o.card)+'<span>'+esc(o.label)+'</span></button>').join('')+'</div><div class="toolbar">'+

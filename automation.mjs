@@ -22,6 +22,8 @@ function modifierRule(match,kind,extra={},group=1){
 const hasTrait=(card,trait)=>(card?.attributes||[]).some(value=>value.replace(/^《|》$/g,'')===trait);
 export function parseAbility(text){
  const t=clean(text).split(/\s*\(: When this card triggers|\s+（\[\[[^\]]+\]\]：このカードがトリガーした時/)[0].trim();let m;
+ if((m=t.match(/^【(?:AUTO|自)】 (?:When this card (?:attacks|is placed on the stage from your hand), this card gets \+X power until end of turn\. X is equal to the number of (other )?《([^》]+)》 characters you have [×x](\d+)\.|このカードが(?:アタックした|手札から舞台に置かれた)時、そのターン中、このカードのパワーを＋Ｘ。Ｘは(他の)?あなたの《([^》]+)》のキャラの枚数×(\d+)に等しい。)$/i)))
+  return {kind:/attacks|アタックした/.test(t)?'attack-self':'entry-self',zone:'stage',countOther:!!(m[1]||m[4]),countTrait:m[2]||m[5],powerPerCharacter:+(m[3]||m[6])};
  if((m=t.match(/^【CONT】 (During your (opponent's )?turn, )?all of your (other )?(?:《([^》]+)》 )?characters( with markers)? get (.+)\.$/i)))
   return modifierRule(m,'global',{condition:m[1]?(m[2]?'opponent':'own'):'always',other:!!m[3],trait:m[4],markers:!!m[5]},6);
  if((m=t.match(/^【CONT】 If you have (\d+) or more other 《([^》]+)》 characters, this card gets (.+)\.$/i)))
@@ -98,8 +100,44 @@ function automaticTiming(text){
  return null;
 }
 function simpleTriggeredEffect(body){
+ const direct=singleEffect(body);
+ if(direct)return direct;
+ const sentences=body.match(/[^。]+。/g);
+ const parts=sentences?.join('')===body?sentences:body.split(/\.\s+(?=(?:Draw|Choose|Put|Look at|Search)\b)/).map((text,i,all)=>i<all.length-1?text+'.':text);
+ if(parts.length<2)return null;
+ const steps=parts.map(singleEffect);
+ return steps.every(step=>step&&!step.optional)?{type:'ability-sequence',steps}:null;
+}
+function singleEffect(body){
  body=body.replace(/\.["”]\s*$/,'.');
  let m;
+ if((m=body.match(/^(?:Deal (\d+) damage to your opponent\.(?: \(Damage cancel(?:ation|lation) occurs\.?\))?|相手に(\d+)ダメージを与える。（ダメージキャンセルは発生する）)$/i)))
+  return {type:'ability-damage',count:+(m[1]||m[2])};
+ if((m=body.match(/^Put this card (?:into your (waiting room|memory|stock|hand|clock)|at the (bottom|top) of your deck)\.$/i)))
+  return {type:'ability-self-move',to:m[1]?({'waiting room':'waiting',memory:'memory',stock:'stock',hand:'hand',clock:'clock'})[m[1].toLowerCase()]:'deck',bottom:m[2]?.toLowerCase()==='bottom'};
+ if((m=body.match(/^あなたはこのカードを(控え室|思い出|ストック置場|手札|クロック置場)に置く。$/)))
+  return {type:'ability-self-move',to:({控え室:'waiting',思い出:'memory',ストック置場:'stock',手札:'hand',クロック置場:'clock'})[m[1]]};
+ if((m=body.match(/^あなたは自分の山札を見て(?:《([^》]+)》の)?キャラを1枚まで選んで相手に見せ、手札に加え、その山札をシャッフルする。$/)))
+  return {type:'ability-search',trait:m[1]};
+ if((m=body.match(/^あなたは自分の控え室の(キャラ|クライマックス)を1枚(まで)?選び、手札に戻す。$/)))
+  return {type:'ability-salvage',cardType:m[1]==='キャラ'?'Character':'Climax',upTo:!!m[2]};
+ if((m=body.match(/^あなたは(\d+)枚(まで)?引き、自分の手札を(\d+)枚選び、控え室に置く。$/)))
+  return {type:'ability-draw-then-move',count:+m[1],upTo:!!m[2],discard:+m[3]};
+ if((m=body.match(/^あなたは自分の山札を上から(\d+)枚(まで)?見て、山札の上に好きな順番で置く。$/)))
+  return {type:'ability-look-order',count:+m[1],upTo:!!m[2]};
+ if((m=body.match(/^あなたは自分の山札を上から1枚見て、山札の上か(控え室|下)に置く。$/)))
+  return {type:'ability-look-place',to:m[1]==='控え室'?'waiting':'deck'};
+ if((m=body.match(/^あなたは自分の山札を上から(\d+)枚(まで)?見て、カードを1枚まで選び、手札に加え、残りのカードを控え室に置く。$/)))
+  return {type:'ability-look',count:+m[1],upTo:!!m[2]};
+ if(body==='あなたは自分のクロックの上から1枚を、ストック置場に置く。')return {type:'ability-clock-move',to:'stock'};
+ if((m=body.match(/^あなたは自分の手札を(\d+)枚選び、控え室に置く。$/)))
+  return {type:'ability-hand-move',to:'waiting',count:+m[1]};
+ if((m=body.match(/^Choose (\d+|one) cards? in your hand, and put (?:it|them) into your waiting room\.$/i)))
+  return {type:'ability-hand-move',to:'waiting',count:m[1].toLowerCase()==='one'?1:+m[1]};
+ const target=parseAbility('【AUTO】 When this card is placed on the stage from your hand, '+body);
+ if(target?.kind==='entry-target')return {type:'entry-target',...target};
+ const jpTarget=parseAbility('【自】 このカードが手札から舞台に置かれた時、'+body);
+ if(jpTarget?.kind==='entry-target')return {type:'entry-target',...jpTarget};
  if((m=body.match(/^あなたは自分のクロックの上から1枚を、控え室に置いてよい。$/)))return {type:'ability-clock-move',to:'waiting',optional:true};
  if((m=body.match(/^If this card's battle opponent is level (\d+) or lower, you may 【REVERSE】 that character\.$/i))
   ||(m=body.match(/^このカードのバトル相手のレベルが(\d+)以下なら、あなたはそのキャラを【リバース】してよい。$/)))
@@ -125,7 +163,7 @@ function simpleTriggeredEffect(body){
  if((m=body.match(/^(You may put|Put) the top X cards of your deck into your waiting room\. X is equal to the number of 《([^》]+)》 characters you have\.$/i)))
   return {type:'ability-mill',countTrait:m[2],optional:/^you may/i.test(m[1])};
  if((m=body.match(/^あなたは(\d+)枚(引く|引いてよい)。$/)))return {type:'ability-draw',count:+m[1],optional:m[2]==='引いてよい'};
- if((m=body.match(/^あなたは自分の山札の上から(\d+)枚を、控え室に置く。$/)))return {type:'ability-mill',count:+m[1]};
+ if((m=body.match(/^あなたは自分の山札の上から(\d+)枚を、控え室に(置く|置いてよい)。$/)))return {type:'ability-mill',count:+m[1],optional:m[2]==='置いてよい'};
  if((m=body.match(/^Look at (up to )?(\d+) cards? from the top of your deck, choose up to (?:1|one) card from among them, put it into your hand, (?:and )?put the rest into your waiting room(?:, and this card gets (.+) until end of turn)?\.$/i))){
   const boost=m[3]?modifiers(m[3]):null;
   if(!m[3]||boost)return {type:'ability-look',count:+m[2],upTo:!!m[1],boost};
@@ -141,11 +179,15 @@ function simpleTriggeredEffect(body){
  return null;
 }
 export function activatedAbilities(card){
- return (card?.ability||[]).join('\n').split(/(?=【(?:CONT|AUTO|ACT|永|自|起)】|\[ACT\])/)
-  .map(clean).filter(text=>/^(?:【ACT】|【起】|\[ACT\])/.test(text))
+ return abilityLines(card).filter(text=>/^(?:【ACT】|【起】|\[ACT\])/.test(text))
   .map((text,index)=>({index,text,action:parseActivatedAbility(text)}));
 }
 function parseActivatedAbility(text){
+ const jpSimple=text.match(/^【起】\s*［(?:\((\d+)\)\s*)?(このカードを【レスト】する)?］\s*(.+)$/);
+ if(jpSimple&&(jpSimple[1]||jpSimple[2])){
+  const task=simpleTriggeredEffect(jpSimple[3]);
+  if(task&&!task.optional)return {kind:'simple',stock:+(jpSimple[1]||0),rest:!!jpSimple[2],task};
+ }
  const jp=text.match(/^【起】\s*［(?:\((\d+)\)\s*)?(このカードを【レスト】する)?］\s*あなたは(他の)?自分のキャラを1枚選び、そのターン中、(.+)。$/);
  if(jp){
   const modifier=modifiers(jp[4]);
@@ -180,6 +222,10 @@ function parseActivatedAbility(text){
  return null;
 }
 function automaticPayment(text){
+ const jpClock=text.match(/^【自】\s*［(?:\((\d+)\) )?自分の山札の上から1枚をクロック置場に置く］/);
+ if(jpClock)return {stock:+(jpClock[1]||0),clockTop:true};
+ const jpDiscard=text.match(/^【自】\s*［(?:\((\d+)\) )?(?:手札を1枚|手札の(クライマックス|キャラ)を1枚)控え室に置く］/);
+ if(jpDiscard)return {stock:+(jpDiscard[1]||0),discard:jpDiscard[2]==='クライマックス'?'climax':jpDiscard[2]==='キャラ'?'character':'card'};
  const stock=text.match(/^【AUTO】\s*\[\((\d+)\)\]/i)||text.match(/^【自】\s*［\((\d+)\)］/);
  if(stock)return {stock:+stock[1]};
  const clock=text.match(/^【AUTO】\s*\[\((\d+)\) Put the top card of your deck into your clock\]/i);
@@ -219,7 +265,8 @@ export function createResolver(card){
  function effect(s,r,vals,label,duration='turn',untilTurn=s.turn){const c=inst(s,r);if(!c)throw Error('Choose a character still on stage.');if(['soul','power','level'].some(k=>vals[k]!==undefined&&!Number.isFinite(vals[k])))throw Error('Modifiers must be finite numbers.');auto(s).effects.push({uid:c.uid,p:r.p,...vals,label,turn:s.turn,untilTurn,expires:duration});}
  function applyEntryModifier(s,ref,t){
   const until=t.opponentNext?s.turn+(s.active===t.p?1:2):s.turn;
-  effect(s,ref,{power:t.power,soul:t.soul},t.label,'turn',until);
+  const count=t.powerPerCharacter?allStage(s,t.p).filter(other=>!inst(s,other).faceDown&&(!t.countOther||other.uid!==t.source?.uid)&&hasTrait(get(inst(s,other).id),t.countTrait)).length:0;
+  effect(s,ref,{power:t.powerPerCharacter?count*t.powerPerCharacter:t.power,soul:t.soul},t.label,'turn',until);
  }
  function turnCondition(s,p,condition){return !condition||condition==='always'||condition==='own'&&s.active===p||condition==='opponent'&&s.active!==p;}
  function stats(s,r){const c=inst(s,r),info=get(c?.id),out={soul:Number(info?.soul)||0,power:Number(info?.power)||0,level:Number(info?.level)||0,breakdown:[],unsupported:[]};if(!c)return {...out,soul:0,power:0};out.breakdown.push({label:'Printed',soul:out.soul,power:out.power});
@@ -358,6 +405,17 @@ export function createResolver(card){
    if(t.upTo)choice(s,'ability-count','How many cards do you want to draw?',Array.from({length:t.count+1},(_,i)=>({value:String(i),label:String(i)})),{p:t.p,task:t});
    else prepend(s,...Array.from({length:t.count},()=>({type:'draw',p:t.p})));
    break;
+  case 'ability-sequence':
+   prepend(s,...t.steps.map(step=>({...step,p:t.p,source:t.source,label:t.label})));
+   break;
+  case 'ability-damage':
+   prepend(s,{type:'effect-damage',p:1-t.p,n:t.count,source:t.source?.uid,label:t.label});
+   break;
+  case 'ability-self-move':{
+   const c=t.source&&inst(s,t.source);
+   if(c){take(s,t.source,t.to);if(t.bottom)z(s,t.p).deck.unshift(z(s,t.p).deck.pop());}
+   break;
+  }
   case 'ability-reverse-opponent':if(canReverseOpponent(s,t))reverseCharacter(s,t.target);break;
   case 'ability-mill':
    if(t.countTrait){
