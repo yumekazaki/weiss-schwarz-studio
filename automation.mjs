@@ -135,9 +135,9 @@ function singleEffect(body){
  if((m=body.match(/^Choose (\d+|one) cards? in your hand, and put (?:it|them) into your waiting room\.$/i)))
   return {type:'ability-hand-move',to:'waiting',count:m[1].toLowerCase()==='one'?1:+m[1]};
  const target=parseAbility('【AUTO】 When this card is placed on the stage from your hand, '+body);
- if(target?.kind==='entry-target')return {type:'entry-target',...target};
+ if(target?.kind==='entry-target')return target.draw?{type:'ability-sequence',steps:[{type:'ability-draw',count:1},{type:'entry-target',...target,draw:false}]}:{type:'entry-target',...target};
  const jpTarget=parseAbility('【自】 このカードが手札から舞台に置かれた時、'+body);
- if(jpTarget?.kind==='entry-target')return {type:'entry-target',...jpTarget};
+ if(jpTarget?.kind==='entry-target')return jpTarget.draw?{type:'ability-sequence',steps:[{type:'ability-draw',count:1},{type:'entry-target',...jpTarget,draw:false}]}:{type:'entry-target',...jpTarget};
  if((m=body.match(/^あなたは自分のクロックの上から1枚を、控え室に置いてよい。$/)))return {type:'ability-clock-move',to:'waiting',optional:true};
  if((m=body.match(/^If this card's battle opponent is level (\d+) or lower, you may 【REVERSE】 that character\.$/i))
   ||(m=body.match(/^このカードのバトル相手のレベルが(\d+)以下なら、あなたはそのキャラを【リバース】してよい。$/)))
