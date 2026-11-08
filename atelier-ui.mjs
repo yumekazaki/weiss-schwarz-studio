@@ -191,9 +191,15 @@ export function mountAtelier(api){
   if(readable&&card?.type==='Character'&&stagePositions.includes(ref.z)&&!(s.match.practiceBot&&ref.p===1)){
    choices.push(...statAdjustments.map(option=>({label:option.label,hint:'Manual '+option.stat+' adjustment',run:()=>api.gainStat(ref,option.stat,option.amount,option.duration)})));
   }
-  const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution'].includes(to));
-  const moveOption=([to,position,label])=>({label,run:()=>api.move([ref],ref.p,to,position)});
+  const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution','memory'].includes(to));
+  const moveOption=([to,position,label,faceDown])=>({label,run:()=>api.move([ref],ref.p,to,position,undefined,faceDown)});
   choices.push(...manualMoves.map(moveOption));
+  choices.push({label:'Make a marker',run:()=>showSimpleMenu(menu,'Choose a character for this marker',stagePositions.flatMap(to=>{
+   const host=s.match.players[ref.p].zones[to][0];
+   return host&&host.uid!==ref.uid&&!host.faceDown&&api.card(host.id)?.type==='Character'?[{label:api.name(host.id)+' · '+labels[to],run:()=>api.makeMarker(ref,{p:ref.p,z:to,uid:host.uid})}]:[];
+  }))});
+  if(stagePositions.includes(ref.z)&&s.match.players[ref.p].zones['markers:'+ref.z].length)choices.push({label:'View marker',run:()=>api.openPile(ref.p,'markers:'+ref.z)});
+
   choices.push({label:'Place on stage…',hint:'Manual card effect',run:()=>stageChoice(ref)});
   choices.push({label:'Place as a marker…',run:()=>showSimpleMenu(menu,'Choose a marker stack',
    stagePositions.map(z=>moveOption(['markers:'+z,'top','Place as marker under '+labels[z]])))});

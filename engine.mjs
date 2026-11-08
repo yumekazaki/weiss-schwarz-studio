@@ -38,7 +38,13 @@ export function validate(deck,catalog,format='Standard',language='EN'){
 }
 export function createMatch(decks){let uid=0;const s={players:decks.map(d=>({zones:Object.fromEntries(zones.map(z=>[z,[]])),mulligan:false})),turn:1,active:0,phase:0,step:'Attack declaration',log:[],damage:[null,null],cost:false};decks.forEach((d,p)=>{s.players[p].zones.deck=shuffle(Object.entries(d).flatMap(([id,n])=>Array.from({length:n},()=>({uid:String(++uid),id,orientation:'stand',faceDown:false,revealed:false,note:''}))));});return s;}
 export function draw(s,p,n=1,to='hand'){const z=s.players[p].zones;let moved=0;for(let i=0;i<n;i++){if(!z.deck.length)break;z[to].push(z.deck.pop());moved++;}return moved;}
-export function move(s,refs,p,to,position='top'){const result=[];for(const r of refs){const z=s.players[r.p].zones[r.z],i=z.findIndex(c=>c.uid===r.uid);if(i<0)continue;const [c]=z.splice(i,1);if(!stage(r.z)||!stage(to))c.orientation='stand';c.revealed=false;result.push(c);}const dest=s.players[p].zones[to];if(position==='bottom')dest.unshift(...result);else dest.push(...result);return result;}
+export function move(s,refs,p,to,position='top'){const result=[];for(const r of refs){const z=s.players[r.p].zones[r.z],i=z.findIndex(c=>c.uid===r.uid);if(i<0)continue;const [c]=z.splice(i,1);
+ if(stage(r.z)&&r.z!==to){
+  const markers=s.players[r.p].zones['markers:'+r.z].splice(0);
+  if(stage(to)&&p===r.p)s.players[p].zones['markers:'+to].push(...markers);
+  else{for(const marker of markers){marker.faceDown=false;marker.revealed=false;marker.orientation='stand';}s.players[r.p].zones.waiting.push(...markers);}
+ }
+ if(!stage(r.z)||!stage(to))c.orientation='stand';c.revealed=false;result.push(c);}const dest=s.players[p].zones[to];if(position==='bottom')dest.unshift(...result);else dest.push(...result);return result;}
 export function refresh(s,p){const z=s.players[p].zones;if(z.deck.length)throw Error('Refresh requires an empty deck. Move remaining cards manually for a special effect.');if(!z.waiting.length)throw Error('Waiting room is empty; resolve pending damage or check loss conditions.');z.deck=shuffle(z.waiting.splice(0));draw(s,p,1,'clock');}
 export function levelUp(s,p,uid){const z=s.players[p].zones;if(z.clock.length<7)throw Error('At least 7 clock cards are needed.');const seven=z.clock.slice(0,7),chosen=seven.find(c=>c.uid===uid);if(!chosen)throw Error('Choose one of the bottom seven clock cards.');z.clock.splice(0,7);z.level.push(chosen);z.waiting.push(...seven.filter(c=>c!==chosen));}
 export function startDamage(s,p,n){if(s.damage[p])throw Error('Finish the pending damage first.');s.damage[p]={remaining:n,canceled:false,uids:[]};}

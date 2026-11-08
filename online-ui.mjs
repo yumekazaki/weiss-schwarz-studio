@@ -256,9 +256,16 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
     if(isStage&&info?.type==='Character')actions.push(...statAdjustments.map(option=>[
      option.label,()=>run('manual-modifier',{stat:option.stat,amount:option.amount,duration:option.duration,label:option.label+' ('+option.stat+')'})
     ]));
-    const movement=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution'].includes(to));
-    const move=([to,position,label])=>[label,()=>run('manual-move',{to,position})];
+    const movement=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution','memory'].includes(to));
+    const move=([to,position,label,faceDown])=>[label,()=>run('manual-move',{to,position,faceDown})];
     actions.push(...movement.map(move));
+    actions.push(['Make a marker',()=>{
+     const targets=stage.filter(to=>{const host=s.players[p].zones[to][0];return host&&host.uid!==ref.uid&&!host.faceDown&&api.card(host.id)?.type==='Character';});
+     show('<h2>Choose a character for this marker</h2>'+targets.map((to,i)=>{const host=s.players[p].zones[to][0];return '<button data-marker-target="'+i+'">'+api.image(host.id)+'<span>'+esc(api.name(host.id))+' · '+esc(api.zoneName(to))+'</span></button>';}).join('')+(targets.length?'':'<p>No eligible character is on your stage.</p>'));
+     document.querySelectorAll('[data-marker-target]').forEach(button=>button.onclick=()=>{const to=targets[+button.dataset.markerTarget],host=s.players[p].zones[to][0];$('#dialog').close();run('manual-move',{to:'markers:'+to,markerHost:host.uid,faceDown:true});});
+    }]);
+    if(isStage&&s.players[p].zones['markers:'+ref.z].length)actions.push(['View marker',()=>openPile(p,'markers:'+ref.z)]);
+
     actions.push(['Place on stage…',()=>chooseStage(to=>run('manual-move',{to,position:'top'}),
      stage.filter(to=>to!==ref.z&&!s.players[p].zones[to].length))]);
     for(const to of stage){

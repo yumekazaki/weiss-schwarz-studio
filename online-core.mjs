@@ -93,7 +93,16 @@ export function reduce(original,p,type,args,catalog){need(p===0||p===1,'Invalid 
  else if(d.type==='Climax')move(s,[args.ref],p,'climax');else{move(s,[args.ref],p,'resolution');s.manualWindow={p,by:p,reason:'Resolve event '+d.code,previousPaused:false};a.paused=true;}
  r.afterMutation(s,before);}
  else if(type==='reposition'){need(s.phase===3&&stageKeys.includes(args.to),'Reposition in main phase.');checkOwn(args.ref);need(stage(args.ref.z),'Choose a stage character.');[own[args.ref.z],own[args.to]]=[own[args.to],own[args.ref.z]];[own['markers:'+args.ref.z],own['markers:'+args.to]]=[own['markers:'+args.to],own['markers:'+args.ref.z]];r.afterMutation(s,before);}
- else if(type==='manual-move'){const rr=refs();need(zones.includes(args.to),'Invalid destination.');need(!stage(args.to)||rr.length===1&&(!own[args.to].length||rr[0].z===args.to),'Use an empty stage position.');move(s,rr,p,args.to,args.position==='bottom'?'bottom':'top');if(args.reveal)for(const c of own[args.to].filter(c=>rr.some(x=>x.uid===c.uid)))c.revealed=true;s.onlineEpoch++;}
+ else if(type==='manual-move'){const rr=refs();need(zones.includes(args.to),'Invalid destination.');need(!stage(args.to)||rr.length===1&&(!own[args.to].length||rr[0].z===args.to),'Use an empty stage position.');
+  if(args.to.startsWith('markers:')){
+   const host=own[args.to.slice(8)]?.[0];
+   need(host&&catalog.get(host.id)?.type==='Character'&&!host.faceDown&&!rr.some(ref=>ref.uid===host.uid),'Choose another character on your stage.');
+   if(args.markerHost)need(host.uid===args.markerHost,'The marker target changed. Choose it again.');
+  }
+  const moved=move(s,rr,p,args.to,args.position==='bottom'?'bottom':'top');
+  if(args.faceDown!==undefined)need(typeof args.faceDown==='boolean'&&(args.to==='memory'||args.to.startsWith('markers:')),'Face selection is available for memory and markers.');
+  for(const c of moved){if(args.faceDown!==undefined)c.faceDown=args.faceDown;else if(args.to.startsWith('markers:'))c.faceDown=true;else if(!['stock','deck','memory'].includes(args.to))c.faceDown=false;if(args.reveal)c.revealed=true;}
+  s.onlineEpoch++;}
  else if(type==='manual-orient'){const rr=refs();need(['stand','rest','reverse'].includes(args.orientation),'Invalid orientation.');for(const ref of rr){need(stage(ref.z),'Only stage cards have battle orientation.');checkOwn(ref).orientation=args.orientation;}}
  else if(type==='manual-reveal'){for(const ref of refs()){const c=checkOwn(ref);c.revealed=!!args.reveal;}s.onlineEpoch++;}
  else if(type==='manual-flip'){for(const ref of refs()){const c=checkOwn(ref);c.faceDown=!c.faceDown;c.revealed=false;}s.onlineEpoch++;}

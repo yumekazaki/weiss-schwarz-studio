@@ -18,7 +18,8 @@ export const cardMoveOptions=[
  ['clock','top','Put on top of clock'],
  ['clock','bottom','Put on bottom of clock'],
  ['level','top','Move to level'],
- ['memory','top','Move to memory'],
+ ['memory','top','Place in memory face up',false],
+ ['memory','top','Place in memory face down',true],
  ['climax','top','Move to climax area'],
  ['resolution','top','Move to resolution'],
 ];
