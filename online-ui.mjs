@@ -231,6 +231,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
    if(choice)for(const option of choice.options){
     if(option.ref?.uid===ref.uid||option.value===ref.uid)actions.push([option.label,()=>act('respond',{choice:choice.id,value:option.value})]);
    }
+   if(isStage&&s.players[ref.p].zones['markers:'+ref.z].length)actions.push(['View marker',()=>openPile(ref.p,'markers:'+ref.z)]);
    if(!own)return showCardActions(anchor,api.name(c.id)+' · '+api.zoneName(ref.z),actions,more);
    const current=s.active===p&&!s.auto.attack&&!s.auto.choice&&!s.auto.reveal&&!s.auto.paused&&!s.manualWindow&&!s.undoRequest;
    const abilities=activatedAbilities(info);
@@ -264,7 +265,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
      show('<h2>Choose a character for this marker</h2>'+targets.map((to,i)=>{const host=s.players[p].zones[to][0];return '<button data-marker-target="'+i+'">'+api.image(host.id)+'<span>'+esc(api.name(host.id))+' · '+esc(api.zoneName(to))+'</span></button>';}).join('')+(targets.length?'':'<p>No eligible character is on your stage.</p>'));
      document.querySelectorAll('[data-marker-target]').forEach(button=>button.onclick=()=>{const to=targets[+button.dataset.markerTarget],host=s.players[p].zones[to][0];$('#dialog').close();run('manual-move',{to:'markers:'+to,markerHost:host.uid,faceDown:true});});
     }]);
-    if(isStage&&s.players[p].zones['markers:'+ref.z].length)actions.push(['View marker',()=>openPile(p,'markers:'+ref.z)]);
+    
 
     actions.push(['Place on stage…',()=>chooseStage(to=>run('manual-move',{to,position:'top'}),
      stage.filter(to=>to!==ref.z&&!s.players[p].zones[to].length))]);
