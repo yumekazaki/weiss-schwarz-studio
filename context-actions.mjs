@@ -20,7 +20,7 @@ export const cardMoveOptions=[
  ['level','top','Move to level'],
  ['memory','top','Move to memory'],
  ['climax','top','Move to climax area'],
- ['resolution','top','Move to resolution zone'],
+ ['resolution','top','Move to resolution'],
 ];
 export function cardContext({match,ref,card,englishAbility=''}){
  const player=match.players[ref.p],ownTurn=match.active===ref.p,phase=match.phase,out=[];

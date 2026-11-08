@@ -191,7 +191,7 @@ export function mountAtelier(api){
   if(readable&&card?.type==='Character'&&stagePositions.includes(ref.z)&&!(s.match.practiceBot&&ref.p===1)){
    choices.push(...statAdjustments.map(option=>({label:option.label,hint:'Manual '+option.stat+' adjustment',run:()=>api.gainStat(ref,option.stat,option.amount,option.duration)})));
   }
-  const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock'].includes(to));
+  const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution'].includes(to));
   const moveOption=([to,position,label])=>({label,run:()=>api.move([ref],ref.p,to,position)});
   choices.push(...manualMoves.map(moveOption));
   choices.push({label:'Place on stage…',hint:'Manual card effect',run:()=>stageChoice(ref)});
