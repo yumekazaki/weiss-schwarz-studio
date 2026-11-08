@@ -192,7 +192,7 @@ export function mountAtelier(api){
    choices.push(...statAdjustments.map(option=>({label:option.label,hint:'Manual '+option.stat+' adjustment',run:()=>api.gainStat(ref,option.stat,option.amount,option.duration)})));
   }
   const manualMoves=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution','memory'].includes(to));
-  const moveOption=([to,position,label,faceDown])=>({label,run:()=>api.move([ref],ref.p,to,position,undefined,faceDown)});
+  const moveOption=([to,position,label,faceDown])=>({label:ref.z==='resolution'&&to==='waiting'?'Send to waiting room':label,run:()=>api.move([ref],ref.p,to,position,undefined,faceDown)});
   choices.push(...manualMoves.map(moveOption));
   choices.push({label:'Make a marker',run:()=>showSimpleMenu(menu,'Choose a character for this marker',stagePositions.flatMap(to=>{
    const host=s.match.players[ref.p].zones[to][0];

@@ -52,7 +52,7 @@ export function cardContext({match,ref,card,englishAbility=''}){
  if(ref.z==='deck'){const top=player.zones.deck.at(-1);if(top?.uid===ref.uid){add('draw','Draw top card');add('trigger','Reveal top card → resolution');}add('return-hand','Take chosen card to hand',{hint:'Search / effect movement; shuffle afterward when required.'});add('shuffle','Shuffle deck');}
  if(ref.z==='stock'){if(player.zones.stock.at(-1)?.uid===ref.uid)add('pay','Pay top stock');else add('stock-order','Stock costs are paid from the top',{disabled:true});}
  if(ref.z==='clock'&&player.zones.clock.length>=7){const i=player.zones.clock.findIndex(c=>c.uid===ref.uid);if(i<7)add('level','Choose this card for level-up');else add('clock-order','Choose a card from the bottom seven',{disabled:true});}
- if(ref.z==='resolution'){const d=match.damage[ref.p];if(d){if(d.canceled||!d.remaining)add('damage-finish',d.canceled?'Resolve canceled damage':'Resolve damage → clock');else add('damage-reveal','Reveal next damage card');}else{add('stock','Finish trigger → stock');add('discard','Finish resolving → waiting room');}}
+ if(ref.z==='resolution'){const d=match.damage[ref.p];if(d){if(d.canceled||!d.remaining)add('damage-finish',d.canceled?'Resolve canceled damage':'Resolve damage → clock');else add('damage-reveal','Reveal next damage card');}else{add('stock','Finish trigger → stock');add('discard','Send to waiting room');}}
  if(ref.z==='climax')add('discard','Clear climax → waiting room');
  if(ref.z==='memory'||ref.z.startsWith('markers:')){add('flip','Flip face up / down');add('reveal','Reveal / hide card');add('return-hand','Return to hand');}
  return out;

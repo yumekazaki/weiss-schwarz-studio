@@ -258,7 +258,7 @@ export async function mountOnline(api,loadAuth=()=>import('https://esm.sh/@supab
      option.label,()=>run('manual-modifier',{stat:option.stat,amount:option.amount,duration:option.duration,label:option.label+' ('+option.stat+')'})
     ]));
     const movement=cardMoveOptions.filter(([to])=>to!==ref.z||['deck','stock','clock','resolution','memory'].includes(to));
-    const move=([to,position,label,faceDown])=>[label,()=>run('manual-move',{to,position,faceDown})];
+    const move=([to,position,label,faceDown])=>[ref.z==='resolution'&&to==='waiting'?'Send to waiting room':label,()=>run('manual-move',{to,position,faceDown})];
     actions.push(...movement.map(move));
     actions.push(['Make a marker',()=>{
      const targets=stage.filter(to=>{const host=s.players[p].zones[to][0];return host&&host.uid!==ref.uid&&!host.faceDown&&api.card(host.id)?.type==='Character';});
