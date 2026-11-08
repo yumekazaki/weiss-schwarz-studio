@@ -219,3 +219,105 @@ body:has(#online.online-fullscreen) #toast { z-index: 1200; }
   box-shadow: 0 0 14px #ffce7290;
   cursor: pointer;
 }
+/* Mobile Mode uses the live browser viewport rather than a scaled desktop mat. */
+.mobile-mode body.table-focus,
+.mobile-mode body.table-focus main,
+.mobile-mode body.table-focus #practice,
+.mobile-mode body.table-focus .match-layout {
+  height: var(--arena-viewport-height,100dvh);
+  min-height: 0;
+}
+.mobile-mode body.table-focus #table {
+  box-sizing: border-box;
+  grid-template-rows: minmax(0,1fr) clamp(38px,6vh,52px) minmax(0,1fr);
+  gap: 5px;
+  padding: 4px max(4px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(4px,env(safe-area-inset-left));
+}
+.mobile-mode body.table-focus .player-mat {
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: 22% minmax(0,1fr) 18%;
+  grid-template-rows: 18px 14px minmax(0,1fr) minmax(0,1fr) clamp(32px,8vh,65px);
+  column-gap: 5px;
+  padding: 4px;
+}
+.mobile-mode body.table-focus .player-mat h3 { font-size: 9px; }
+.mobile-mode body.table-focus .player-deck-name { font-size: 8px; }
+.mobile-mode body.table-focus .player-mat > .stage-row { gap: 5px; align-items: stretch; padding: 2px 0; }
+.mobile-mode body.table-focus #table .stage-zone {
+  width: calc((100% - 10px)/3);
+  max-width: 120px;
+  height: 100%;
+  min-width: 0;
+}
+.mobile-mode body.table-focus .player-mat > .zone-row { gap: 3px; }
+.mobile-mode body.table-focus .zone { padding: 3px; overflow: hidden; }
+.mobile-mode body.table-focus .zone-label,
+.mobile-mode body.table-focus #table .stage-zone > .zone-label { font-size: 6px; line-height: 8px; letter-spacing: 0; padding: 1px; }
+.mobile-mode body.table-focus .zone-count { font-size: 13px; }
+.mobile-mode body.table-focus .zone:not(.stage-zone) img { height: 26px; max-width: 20px; margin-right: 2px; }
+.mobile-mode body.table-focus .marker-link { min-width: 0; left: 0; right: 0; bottom: 0; font-size: 6px; }
+.mobile-mode body.table-focus .hand { gap: 3px; padding-top: 2px; }
+.mobile-mode body.table-focus .hand-card-wrap,
+.mobile-mode body.table-focus .hand-card { width: 30px; }
+.mobile-mode body.table-focus .hand-card img { height: 100%; max-height: 44px; }
+.mobile-mode body.table-focus .hand .card-back { width: 26px; height: 36px; }
+.mobile-mode body.table-focus .hand > .zone-label { display: none; }
+.mobile-mode body.table-focus .phase-banner { padding: 3px 8px; gap: 5px; }
+.mobile-mode body.table-focus .phase-identity strong { font-size: 15px; }
+.mobile-mode body.table-focus .phase-identity small { font-size: 7px; }
+.mobile-mode body.table-focus .phase-identity em,
+.mobile-mode body.table-focus .phase-dots { display: none; }
+.mobile-mode body.table-focus .phase-actions button { padding: 7px; font-size: 10px; }
+.mobile-mode body.table-focus .arena-chrome { left: max(6px,env(safe-area-inset-left)); right: max(6px,env(safe-area-inset-right)); }
+
+.mobile-mode #online.online-fullscreen {
+  height: var(--arena-viewport-height,100dvh);
+  overflow: hidden;
+  padding: 0 max(4px,env(safe-area-inset-right)) 0 max(4px,env(safe-area-inset-left)) !important;
+}
+.mobile-mode .online-fullscreen #online-content { margin: 0; overflow: hidden; }
+.mobile-mode .online-fullscreen .online-playmat {
+  width: 100%;
+  min-width: 0;
+  height: calc(var(--arena-viewport-height,100dvh) - 43px);
+  grid-template-rows: minmax(0,1fr) 42px minmax(0,1fr);
+  gap: 4px;
+  padding: 4px 4px max(4px,env(safe-area-inset-bottom));
+}
+.mobile-mode .online-fullscreen .online-player {
+  grid-template-columns: 22% minmax(0,1fr) 18%;
+  grid-template-rows: 22px minmax(0,1fr);
+  padding: 4px;
+  gap: 3px 5px;
+}
+.mobile-mode .online-fullscreen .online-player h3 { font-size: 8px; overflow: hidden; }
+.mobile-mode .online-fullscreen .online-left,
+.mobile-mode .online-fullscreen .online-right { gap: 3px; min-width: 0; }
+.mobile-mode .online-fullscreen .online-center { grid-template-rows: minmax(0,1fr) minmax(0,1fr) clamp(30px,8vh,60px); gap: 3px; min-width: 0; }
+.mobile-mode .online-fullscreen .online-stage-row { gap: 5px; }
+.mobile-mode .online-fullscreen .online-stage { width: calc((100% - 10px)/3); max-width: 120px; min-width: 0; }
+.mobile-mode .online-fullscreen .online-zone { padding: 3px; }
+.mobile-mode .online-fullscreen .online-zone span { font-size: 6px; overflow-wrap: anywhere; }
+.mobile-mode .online-fullscreen .online-zone b { font-size: 13px; }
+.mobile-mode .online-fullscreen .online-zone img { height: 26px; right: 2px; bottom: 2px; }
+.mobile-mode .online-fullscreen .online-stage > span { font-size: 6px; }
+.mobile-mode .online-fullscreen .online-markers { font-size: 6px; left: 0; bottom: 0; padding: 0 2px; }
+.mobile-mode .online-fullscreen .online-hand { gap: 3px; padding-top: 2px; }
+.mobile-mode .online-fullscreen .online-hand > div { height: 100%; }
+.mobile-mode .online-fullscreen .online-hand .online-card { height: 100%; max-height: 44px; width: 30px; }
+.mobile-mode .online-fullscreen .online-hand .card-back { width: 26px; height: 36px; }
+.mobile-mode .online-fullscreen .online-hand > small { display: none; }
+.mobile-mode .online-fullscreen .online-phase { padding: 3px 8px !important; }
+.mobile-mode .online-fullscreen .online-phase strong { font-size: 15px; }
+.mobile-mode .online-fullscreen .online-phase button { padding: 6px; }
+.mobile-mode .online-fullscreen #online-waiting { font-size: 9px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-mode body.table-focus .player-mat { grid-template-rows: 15px 0 minmax(0,1fr) minmax(0,1fr) 30px; }
+  .mobile-mode body.table-focus .player-deck-name { display: none; }
+  .mobile-mode body.table-focus .hand .card-back,
+  .mobile-mode .online-fullscreen .online-hand .card-back { height: 26px; width: 19px; }
+  .mobile-mode body.table-focus .hand-card img { max-height: 28px; }
+  .mobile-mode body.table-focus .zone:not(.stage-zone) img,
+  .mobile-mode .online-fullscreen .online-zone img { height: 18px; }
+}

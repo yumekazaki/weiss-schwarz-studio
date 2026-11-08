@@ -8,7 +8,7 @@ export function mountAtelier(api){
  const landscapeFilters=document.createElementNS('http://www.w3.org/2000/svg','svg');landscapeFilters.classList.add('landscape-filters');landscapeFilters.setAttribute('aria-hidden','true');landscapeFilters.innerHTML='<defs><filter id="meadow-breeze" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency=".004 .024" numOctaves="2" seed="7"><animate attributeName="baseFrequency" values=".004 .024;.006 .019;.004 .024" dur="9s" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter><filter id="blossom-breeze" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency=".004 .012" numOctaves="2" seed="4"><animate attributeName="baseFrequency" values=".004 .012;.005 .016;.004 .012" dur="13s" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="2.5" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';document.body.append(landscapeFilters);
  const workshopScenery=document.createElement('div');workshopScenery.id='workshop-scenery';workshopScenery.setAttribute('aria-hidden','true');workshopScenery.setAttribute('inert','');workshopScenery.innerHTML='<div class="workshop-image"></div><div class="workshop-canopy"></div><div class="workshop-sunlight"></div><div class="workshop-shade"></div>'+Array.from({length:20},(_,i)=>'<i class="workshop-petal" style="--x:'+((i*43+7)%100)+'%;--delay:-'+((i*7)%29)+'s;--duration:'+(20+i%9)+'s;--drift:'+(45+i%6*27)+'px;--size:'+(4+i%4)+'px"></i>').join('');document.body.prepend(workshopScenery);
 
- let menuRef=null,previewId=null,multi=false,hoverTimer=null,focusMode=false,libraryParent=null,lastMenuRect=null;
+ let menuRef=null,previewId=null,multi=false,hoverTimer=null,focusMode=false,fullscreenWanted=false,libraryParent=null,lastMenuRect=null;
  const collection=$('#library .collection'),filters=$('#library .filters'),workspace=$('#library .workspace');
  const librarySlot=document.createElement('aside');librarySlot.className='builder-library panel';librarySlot.innerHTML='<div class="browser-heading"><p class="eyebrow">CARD LIBRARY</p><h2>Find your next ace.</h2><p>Click artwork or + to add. Use ⤢ to inspect.</p></div><details class="builder-filters"><summary>Search filters</summary></details><div class="library-content-slot"></div>';
  $('#decks .deck-layout').append(librarySlot);
@@ -20,9 +20,27 @@ export function mountAtelier(api){
  document.body.append(preview);
  preview.innerHTML='<div class="hover-inspector-bar">CARD INSPECTOR</div><div class="inspector-empty"><span>✦</span><h2>A closer look.</h2><p>Hover or focus a card to see its artwork and English gameplay text here.</p></div>';
  function syncInspector(){const eligible=['decks','library','practice','online'].includes(document.body.dataset.view)&&!document.body.classList.contains('table-focus')&&!document.querySelector('#online.online-fullscreen');document.body.classList.toggle('inspector-docked',eligible);preview.hidden=!eligible;}
- function fitBattlefield(){const table=$('#table'),frame=table.parentElement;if(!document.body.classList.contains('table-focus')){table.style.cssText='';frame.style.height='';return;}const top=48,available=Math.max(60,window.innerHeight-top-8),width=Math.max(1120,frame.clientWidth*726/available);table.style.width=width+'px';table.style.transform='none';const height=table.scrollHeight,scale=Math.min(frame.clientWidth/width,available/height);table.style.top=top+'px';table.style.transform='translateX(-50%) scale('+scale+')';frame.style.height=window.innerHeight+'px';}
+ function fitBattlefield(){const table=$('#table'),frame=table.parentElement;if(!document.body.classList.contains('table-focus')){table.style.cssText='';frame.style.height='';return;}const mobile=document.documentElement.classList.contains('mobile-mode');
+ if(mobile){
+  const height=window.visualViewport?.scale===1?window.visualViewport.height:window.innerHeight;
+  document.documentElement.style.setProperty('--arena-viewport-height',height+'px');
+  table.style.cssText='width:100%;height:calc(var(--arena-viewport-height, 100dvh) - 48px);top:48px;left:0;transform:none';
+  frame.style.height=height+'px';
+  return;
+ }
+ table.style.height='';table.style.left='';
+ const top=48,available=Math.max(60,window.innerHeight-top-8),width=Math.max(1120,frame.clientWidth*726/available);table.style.width=width+'px';table.style.transform='none';const height=table.scrollHeight,scale=Math.min(frame.clientWidth/width,available/height);table.style.top=top+'px';table.style.transform='translateX(-50%) scale('+scale+')';frame.style.height=window.innerHeight+'px';}
 
- window.addEventListener('resize',()=>{fitBattlefield();syncInspector();});
+ function viewportChanged(){
+ const height=window.visualViewport?.scale===1?window.visualViewport.height:window.innerHeight;
+ document.documentElement.style.setProperty('--arena-viewport-height',height+'px');
+ window.requestAnimationFrame(()=>{fitBattlefield();syncInspector();});
+}
+ window.addEventListener('resize',viewportChanged);
+ window.addEventListener('orientationchange',viewportChanged);
+ window.visualViewport?.addEventListener('resize',viewportChanged);
+ new MutationObserver(viewportChanged).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+ viewportChanged();
  const menu=document.createElement('section');menu.id='card-action-menu';menu.className='card-action-menu';menu.hidden=true;menu.setAttribute('aria-label','Card actions');menu.setAttribute('role','dialog');document.body.append(menu);
 
  // Keep every existing manual operation, but gather them behind a single named secondary control.
@@ -109,8 +127,20 @@ export function mountAtelier(api){
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&controlsOpen&&menu.hidden){closeControls(true);e.preventDefault();e.stopImmediatePropagation();}},true);
  document.addEventListener('arena-choice-changed',choiceControls);
 
- function updateFullscreen(){const active=document.body.dataset.view==='practice'&&(!!document.fullscreenElement||focusMode);document.body.classList.toggle('table-focus',active);if(active){dockControls();choiceControls();if(api.state().match?.auto?.choice&&!controlsOpen)openControls(true);}else closeControls();fsButton.setAttribute('aria-pressed',String(active));hidePreview();syncInspector();window.requestAnimationFrame(fitBattlefield);fsButton.textContent=active?(focusMode?'⤡ Exit focus view':'⤡ Exit fullscreen'):'⛶ Fullscreen';}
- fsButton.onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(focusMode){focusMode=false;}else if(document.documentElement.requestFullscreen){await document.documentElement.requestFullscreen();}else{focusMode=true;api.toast('Fullscreen is unavailable here. Focus view is on.');}}catch{focusMode=true;api.toast('This browser blocks fullscreen. Focus view is on instead.');}updateFullscreen();};
+ function updateFullscreen(){const active=document.body.dataset.view==='practice'&&(!!document.fullscreenElement||focusMode||fullscreenWanted&&document.documentElement.classList.contains('mobile-mode'));document.body.classList.toggle('table-focus',active);if(active){dockControls();choiceControls();if(api.state().match?.auto?.choice&&!controlsOpen)openControls(true);}else closeControls();fsButton.setAttribute('aria-pressed',String(active));hidePreview();syncInspector();window.requestAnimationFrame(fitBattlefield);fsButton.textContent=active?(focusMode?'⤡ Exit focus view':'⤡ Exit fullscreen'):'⛶ Fullscreen';}
+ fsButton.onclick=async()=>{
+  if(document.body.classList.contains('table-focus')){
+   fullscreenWanted=false;focusMode=false;
+   if(document.fullscreenElement)await document.exitFullscreen();
+  }else{
+   fullscreenWanted=true;
+   try{
+    if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
+    else focusMode=true;
+   }catch{focusMode=true;}
+  }
+  updateFullscreen();
+ };
  document.addEventListener('fullscreenchange',updateFullscreen);
 
  function phaseBanner(){const s=api.state(),m=s.match;if(!m)return '';return '<section class="phase-banner" aria-label="Current phase and turn"><div class="phase-identity"><span class="active-player-dot"></span><div><small>PLAYER '+(m.active+1)+' · TURN '+m.turn+'</small><strong id="mid-phase">'+phaseNames[m.phase]+' <em>phase</em></strong>'+(m.phase===5?'<span class="attack-step-name">'+esc(m.step)+'</span>':'')+'</div></div><div class="phase-dots" aria-hidden="true">'+phaseNames.map((p,i)=>'<i class="'+(i===m.phase?'current':'')+'" title="'+p+'"></i>').join('')+'</div><div class="phase-actions"><button id="previous-phase" aria-label="Previous phase" title="Correct an accidental phase advance">↶</button><button id="next-phase-middle" class="primary">Next Phase <span>→</span></button></div></section>';}
@@ -178,7 +208,7 @@ export function mountAtelier(api){
 
  document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!menu.contains(e.target))closeMenu();},true);
  menu.addEventListener('keydown',e=>{if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;const buttons=[...menu.querySelectorAll('[data-menu-choice]:not([disabled])')],at=buttons.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?buttons.length-1:(at+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length;buttons[next]?.focus();e.preventDefault();});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!menu.hidden){closeMenu();e.preventDefault();e.stopImmediatePropagation();}else if(!preview.hidden){hidePreview();e.preventDefault();e.stopImmediatePropagation();}else if(focusMode){focusMode=false;updateFullscreen();}}},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!menu.hidden){closeMenu();e.preventDefault();e.stopImmediatePropagation();}else if(!preview.hidden){hidePreview();e.preventDefault();e.stopImmediatePropagation();}else if(focusMode||fullscreenWanted){focusMode=false;fullscreenWanted=false;updateFullscreen();}}},true);
  document.addEventListener('click',e=>{if(e.target.closest('[data-inspect]')){hidePreview();closeMenu();}},true);
  setArtwork('decks');onView('home');
  return {onView,matchUpdated,hidePreview,closeMenu,clickCard,clickPile,emptyStage,showPreview,previewElement:preview,menuElement:menu,manualElement:manual};
