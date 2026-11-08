@@ -1,5 +1,22 @@
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pickerKinds=new Set(['ability-offer','ability-count','ability-clock-choice','trigger-order','ability-search','ability-look-target','ability-look-order','ability-look-place','ability-salvage','entry-stock','ability-pay-card','ability-hand-move','ability-resonate','level']);
+export function anchorBattlefieldPrompt(element,getAnchor){
+ const view=element.ownerDocument.defaultView;
+ function position(){
+  const anchor=getAnchor();
+  if(!anchor)return;
+  const rect=anchor.getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  const top=Math.max(8,rect.top+8),left=Math.max(8,rect.left+8);
+  element.classList.add('battlefield-prompt');
+  Object.assign(element.style,{position:'fixed',left:left+'px',top:top+'px',right:'auto',bottom:'auto',margin:'0',transform:'none',width:Math.min(900,rect.width-16)+'px',maxWidth:'calc(100vw - 16px)',maxHeight:Math.max(60,Math.min(rect.height-16,view.innerHeight-top-8))+'px'});
+ }
+ const schedule=()=>view.requestAnimationFrame(position);
+ view.addEventListener('resize',schedule);
+ view.addEventListener('orientationchange',schedule);
+ view.addEventListener('scroll',schedule,true);
+ view.visualViewport?.addEventListener('resize',schedule);
+ return position;
+}
 export function stageTargetOptions(choice){
  return (choice?.options||[]).filter(o=>!o.disabled&&o.ref&&/^(center|back)-/.test(o.ref.z));
 }
@@ -22,15 +39,18 @@ export function mountAbilityPicker(parent,api){
  reopen.onclick=()=>{reopen.hidden=true;dialog.showModal();};
  dialog.addEventListener('close',()=>{reopen.hidden=!displayed;});
  let displayed;
+ let currentChoice;
+ const position=anchorBattlefieldPrompt(dialog,()=>api.choiceAnchor?.(currentChoice));
  return (choice,respond,scope)=>{
-  if(!choice||!pickerKinds.has(choice.kind)){
+  currentChoice=choice;
+  if(!choice||!choice.options?.length||stageTargetOptions(choice).length>0||choice.kind==='battle'){
    if(dialog.open)dialog.close();
    displayed=null;
    reopen.hidden=true;
    return;
   }
   const key=scope+'|'+choice.id;
-  if(key===displayed)return;
+  if(key===displayed){position();return;}
   displayed=key;
   reopen.textContent=choice.kind==='ability-offer'?'Resolve effect…':'Continue effect…';
   reopen.hidden=true;
@@ -51,10 +71,12 @@ export function mountAbilityPicker(parent,api){
   }
   dialog.querySelector('[data-picker-board]').onclick=()=>dialog.close();
   if(!dialog.open)dialog.showModal();
+  position();
  };
 }
 export function mountResolution(api){
- const picker=mountAbilityPicker(document.body,api);
+ const ownerMat=choice=>document.querySelector('#table .player-mat[data-player="'+(choice?.p??choice?.task?.p??api.state()?.active??0)+'"]');
+ const picker=mountAbilityPicker(document.body,{...api,choiceAnchor:ownerMat});
  const table=$('#table');
  table.addEventListener('click',event=>{
   const s=api.state(),choice=s?.auto?.choice,zone=event.target.closest('[data-stage]');
@@ -64,7 +86,8 @@ export function mountResolution(api){
   event.stopPropagation();
   api.commit('Choose '+selected.label,()=>api.resolver.respond(s,choice.id,selected.value));
  },true);
- const panel=document.createElement('section');panel.id='resolution-panel';panel.className='resolution-panel';panel.setAttribute('aria-label','Guided game resolution');$('.match-layout').before(panel);
+ const panel=document.createElement('section');panel.id='resolution-panel';panel.className='resolution-panel';panel.setAttribute('aria-label','Guided game resolution');($('#arena-game-controls .arena-controls-content')||$('#practice')).append(panel);
+ const positionPanel=anchorBattlefieldPrompt(panel,()=>api.state()?.auto?.choice?ownerMat(api.state().auto.choice):null);
  const refit=()=>window.dispatchEvent(new window.Event('resize'));panel.addEventListener('toggle',refit,true);if(window.ResizeObserver){const observer=new window.ResizeObserver(refit);[panel,document.querySelector('#practice>.heading'),document.querySelector('.table-toolbar')].filter(Boolean).forEach(e=>observer.observe(e));}
  const revealPanel=document.createElement('section');revealPanel.id='check-reveal-flash';revealPanel.setAttribute('role','status');revealPanel.setAttribute('aria-live','polite');revealPanel.hidden=true;document.body.append(revealPanel);
  let flashState=null,flashId=null,revealTimer=null,loadTimer=null;
@@ -75,6 +98,13 @@ export function mountResolution(api){
   let started=false;function ready(){if(started)return;started=true;window.clearTimeout(loadTimer);revealTimer=window.setTimeout(finish,api.revealMs??700);}const img=revealPanel.querySelector('img');if(!img||img.complete)ready();else{img.addEventListener('load',ready,{once:true});img.addEventListener('error',ready,{once:true});loadTimer=window.setTimeout(ready,api.revealLoadMs??1800);}
  }
  function render(){const s=api.state();if(!s){clearFlash();picker(null);return;}if(api.ready&&!api.ready()){panel.innerHTML='<p>Loading match cards…</p>';return;}const a=api.resolver.auto(s),c=a.choice,attack=a.attack,stats=attack?api.resolver.stats(s,attack.ref):null;
+  if(c&&document.body.dataset.view==='practice'){
+   $('#practice').append(panel);panel.classList.add('battlefield-resolution');positionPanel();
+  }else{
+   panel.classList.remove('battlefield-resolution','battlefield-prompt');panel.style.cssText='';
+   const controls=$('#arena-game-controls .arena-controls-content');
+   if(controls)controls.append(panel);
+  }
   picker(document.body.dataset.view==='practice'&&(!s.practiceBot||c?.p!==1)?c:null,(value,onError)=>api.commit('Resolve card choice',()=>api.resolver.respond(s,c.id,value),onError),s.deckNames?.join('|')||'practice');
   const targets=!s.practiceBot||c?.p!==1?stageTargetOptions(c):[];
   table.querySelectorAll('[data-stage]').forEach(zone=>zone.classList.toggle('eligible-ability-target',targets.some(o=>zone.dataset.stage===o.ref.p+'|'+o.ref.z)));

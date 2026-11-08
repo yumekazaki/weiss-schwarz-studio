@@ -321,3 +321,55 @@ body:has(#online.online-fullscreen) #toast { z-index: 1200; }
   .mobile-mode body.table-focus .zone:not(.stage-zone) img,
   .mobile-mode .online-fullscreen .online-zone img { height: 18px; }
 }
+/* Decisions stay over the deciding player's battlefield without adding layout rows. */
+.player-mat, .online-player { position: relative; }
+dialog.battlefield-prompt {
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #b9d8d0;
+  background: #142536f5;
+  box-shadow: 0 8px 30px #0009;
+  border-radius: 12px;
+}
+dialog.battlefield-prompt h2 { margin: 0 0 8px; font-size: 19px; }
+dialog.battlefield-prompt p { margin: 6px 0; }
+dialog.battlefield-prompt .mulligan-hand { gap: 8px; }
+dialog.battlefield-prompt .mulligan-card img { height: clamp(70px,15vh,160px); }
+dialog.battlefield-prompt .ability-picker-grid { max-height: none; }
+#online .online-player #online-prompt:not(:empty) {
+  position: absolute;
+  top: 30px;
+  left: 6px;
+  right: 6px;
+  max-height: calc(100% - 38px);
+  overflow: auto;
+  margin: 0;
+  z-index: 12;
+}
+#online:has(.ability-zone-picker[open]) #online-prompt,
+#online:has(#opening-hand[open]) #online-prompt { display: none; }
+#resolution-panel.battlefield-resolution {
+  position: fixed;
+  box-sizing: border-box;
+  z-index: 40;
+  overflow: auto;
+  background: #142536f5;
+  box-shadow: 0 8px 30px #0009;
+  margin: 0;
+}
+body:has(.ability-zone-picker[open]) #resolution-panel.battlefield-resolution { visibility: hidden; }
+.battlefield-resolution .resolution-header > :not(b):not(#effect-tools),
+.battlefield-resolution > details,
+.battlefield-resolution .attack-soul { display: none; }
+#practice-bot-status {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
+  max-width: none;
+  max-height: 40%;
+  overflow: auto;
+  z-index: 15;
+  margin: 0;
+}
